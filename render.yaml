@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: wizenance-sms-gateway
+    runtime: node
+    plan: free
+    buildCommand: npm install --omit=dev
+    startCommand: node server/sms-gateway/server.mjs
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20.19.4
+      - key: SEMAPHORE_API_KEY
+        sync: false
+      - key: SEMAPHORE_SENDER_NAME
+        value: WIZENANCE
+      - key: SMS_ALLOWED_ORIGIN
+        value: "*"
+      - key: OTP_TTL_MS
+        value: "300000"
+      - key: OTP_REQUEST_WINDOW_MS
+        value: "900000"
+      - key: OTP_REQUEST_LIMIT_MAX
+        value: "5"
+      - key: OTP_VERIFY_WINDOW_MS
+        value: "900000"
+      - key: OTP_VERIFY_LIMIT_MAX
+        value: "10"

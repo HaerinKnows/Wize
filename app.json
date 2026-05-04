@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "Wizenance",
+    "slug": "wizenance",
+    "scheme": "wizenance",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "plugins": [
+      "expo-router",
+      "expo-local-authentication",
+      "expo-secure-store",
+      "expo-camera",
+      "expo-font"
+    ],
+    "newArchEnabled": false,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.wizenance.mobile"
+    },
+    "android": {
+      "package": "com.wizenance.mobile",
+      "permissions": [
+        "CAMERA",
+        "READ_SMS",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "82bc8db6-3345-43b7-aebb-2bed7e3ed86c"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/82bc8db6-3345-43b7-aebb-2bed7e3ed86c"
+    }
+  }
+}

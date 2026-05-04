@@ -1,0 +1,13 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "Wizenance",
+    "wizenance"
+  ],
+  "ignorePaths": [
+    "node_modules/**",
+    "dist/**",
+    ".expo/**"
+  ]
+}

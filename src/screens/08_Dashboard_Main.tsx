@@ -1,0 +1,246 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { Modal as RNModal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Card } from '@/components/Card';
+import { Chip } from '@/components/Chip';
+import { FloatingActionButton } from '@/components/FloatingActionButton';
+import { Toast } from '@/components/Toast';
+import { TransactionRow } from '@/components/TransactionRow';
+import { Screen } from '@/screens/Screen';
+import { useAppStore } from '@/store/useAppStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { radius, spacing, ThemeColors, typography } from '@/design/tokens';
+import { ThemeMode, useTheme } from '@/theme/ThemeProvider';
+
+type MenuItem = {
+  label: string;
+  route?: string;
+  danger?: boolean;
+};
+
+const menuItems: MenuItem[] = [
+  { label: 'Achievements', route: '/achievements' },
+  { label: 'Analytics', route: '/analytics' },
+  { label: 'Goal Setter', route: '/goal-setter' },
+  { label: 'Smart Tips', route: '/smart-tips' },
+  { label: 'Budgets', route: '/budgets' },
+  { label: 'Scan SMS', route: '/scan-sms' },
+  { label: 'Add Transaction', route: '/add-transaction' },
+  { label: 'Log Out', danger: true }
+];
+
+function HamburgerIcon({ color }: { color: string }) {
+  return (
+    <View style={stylesStatic.hamburgerWrap}>
+      <View style={[stylesStatic.hamburgerLine, { backgroundColor: color }]} />
+      <View style={[stylesStatic.hamburgerLine, { backgroundColor: color }]} />
+      <View style={[stylesStatic.hamburgerLine, { backgroundColor: color }]} />
+    </View>
+  );
+}
+
+export default function DashboardMainScreen() {
+  const { colors, mode, setMode } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const allTransactions = useAppStore((s) => s.transactions);
+  const lastSync = useAppStore((s) => s.lastSyncAt);
+  const refreshSync = useAppStore((s) => s.refreshSync);
+  const syncInProgress = useAppStore((s) => s.syncInProgress);
+  const syncMessage = useAppStore((s) => s.syncMessage);
+  const clearSyncMessage = useAppStore((s) => s.clearSyncMessage);
+  const logout = useAuthStore((s) => s.logout);
+  const userId = useAuthStore((s) => s.userId);
+
+  const recentTransactions = useMemo(() => {
+    return allTransactions.filter((t) => (t.ownerUserId ?? 'user_demo') === userId).slice(0, 6);
+  }, [allTransactions, userId]);
+
+  const onMenuPress = (item: MenuItem) => {
+    setMenuOpen(false);
+
+    if (item.danger) {
+      logout();
+      router.replace('/auth-choice');
+      return;
+    }
+
+    if (item.route) {
+      router.push(item.route as never);
+    }
+  };
+
+  const onRefreshSync = async () => {
+    await refreshSync(userId ?? 'user_demo');
+  };
+
+  const onSetTheme = async (nextMode: ThemeMode) => {
+    await setMode(nextMode);
+  };
+
+  useEffect(() => {
+    if (!syncMessage) return;
+    const timer = setTimeout(() => clearSyncMessage(), 2600);
+    return () => clearTimeout(timer);
+  }, [clearSyncMessage, syncMessage]);
+
+  return (
+    <Screen>
+      <View style={styles.header}>
+        <Pressable accessibilityLabel="Open menu" accessibilityRole="button" onPress={() => setMenuOpen(true)} style={styles.iconButton}>
+          <HamburgerIcon color={colors.textPrimary} />
+        </Pressable>
+        <Text style={styles.title}>Wizenance</Text>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      <Card header="Recent Transactions">
+        {recentTransactions.length === 0 ? <Text style={styles.empty}>No transactions yet.</Text> : null}
+        {recentTransactions.map((txn) => (
+          <TransactionRow
+            key={txn.id}
+            category={txn.category}
+            amountMinor={txn.amountMinor}
+            timestamp={txn.timestamp}
+            currency={txn.currency}
+            notes={txn.notes}
+          />
+        ))}
+      </Card>
+
+      <Text style={styles.sync}>Sync: {lastSync ? new Date(lastSync).toLocaleString() : 'Pending'}</Text>
+
+      <FloatingActionButton onPress={() => router.push('/add-transaction')} />
+
+      <RNModal transparent visible={menuOpen} animationType="slide" onRequestClose={() => setMenuOpen(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setMenuOpen(false)}>
+          <Pressable style={styles.drawer}>
+            <Text style={styles.drawerTitle}>Menu</Text>
+
+            <Text style={styles.sectionTitle}>Appearance</Text>
+            <View style={styles.themeRow}>
+              <Chip label="System" selected={mode === 'system'} onPress={() => void onSetTheme('system')} />
+              <Chip label="Light" selected={mode === 'light'} onPress={() => void onSetTheme('light')} />
+              <Chip label="Dark" selected={mode === 'dark'} onPress={() => void onSetTheme('dark')} />
+            </View>
+
+            <Pressable onPress={onRefreshSync} style={styles.syncButton}>
+              <Text style={styles.syncButtonText}>{syncInProgress ? 'Syncing...' : 'Refresh Sync'}</Text>
+            </Pressable>
+
+            <View style={styles.menuList}>
+              {menuItems.map((item) => (
+                <Pressable key={item.label} onPress={() => onMenuPress(item)} style={styles.menuRow}>
+                  <Text style={[styles.menuText, item.danger && styles.danger]}>{item.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </Pressable>
+        </Pressable>
+      </RNModal>
+
+      {syncMessage ? <Toast message={syncMessage} /> : null}
+    </Screen>
+  );
+}
+
+const stylesStatic = StyleSheet.create({
+  hamburgerWrap: {
+    gap: 4
+  },
+  hamburgerLine: {
+    width: 18,
+    height: 2,
+    borderRadius: 99
+  }
+});
+
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    header: {
+      minHeight: 48,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between'
+    },
+    iconButton: {
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: radius.pill,
+      backgroundColor: colors.card
+    },
+    headerSpacer: {
+      width: 44,
+      height: 44
+    },
+    title: {
+      ...typography.h2,
+      color: colors.textPrimary
+    },
+    empty: {
+      ...typography.caption,
+      color: colors.textSecondary
+    },
+    sync: {
+      ...typography.caption,
+      color: colors.textSecondary
+    },
+    backdrop: {
+      flex: 1,
+      backgroundColor: colors.modalBackdrop,
+      justifyContent: 'flex-start'
+    },
+    drawer: {
+      width: '78%',
+      minHeight: '100%',
+      paddingTop: 52,
+      paddingHorizontal: spacing.lg,
+      backgroundColor: colors.card
+    },
+    drawerTitle: {
+      ...typography.h2,
+      color: colors.textPrimary,
+      marginBottom: spacing.sm
+    },
+    sectionTitle: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      marginBottom: spacing.xs
+    },
+    themeRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginBottom: spacing.md
+    },
+    syncButton: {
+      minHeight: 42,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.line,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: spacing.md
+    },
+    syncButtonText: {
+      ...typography.caption,
+      color: colors.textPrimary
+    },
+    menuList: {
+      gap: spacing.xs
+    },
+    menuRow: {
+      minHeight: 48,
+      justifyContent: 'center',
+      borderRadius: 12,
+      paddingHorizontal: spacing.md
+    },
+    menuText: {
+      ...typography.body,
+      color: colors.textPrimary
+    },
+    danger: {
+      color: colors.danger
+    }
+  });

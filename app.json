@@ -34,11 +34,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "82bc8db6-3345-43b7-aebb-2bed7e3ed86c"
+        "projectId": "48a0ee68-3598-4e7c-be09-499ede85247a"
       }
     },
-    "updates": {
-      "url": "https://u.expo.dev/82bc8db6-3345-43b7-aebb-2bed7e3ed86c"
-    }
+    "owner": "haerinknows"
   }
 }

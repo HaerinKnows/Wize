@@ -23,3 +23,13 @@ services:
         value: "900000"
       - key: OTP_VERIFY_LIMIT_MAX
         value: "10"
+      - key: SYNC_DATA_DIR
+        value: "server/sms-gateway/data/sync"
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+      - key: FIRESTORE_SYNC_COLLECTION
+        value: "userSyncSnapshots"

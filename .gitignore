@@ -4,3 +4,4 @@ dist
 coverage
 *.log
 .env
+server/sms-gateway/data

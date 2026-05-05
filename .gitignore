@@ -5,3 +5,5 @@ coverage
 *.log
 .env
 server/sms-gateway/data
+*firebase-adminsdk*.json
+serviceAccount*.json

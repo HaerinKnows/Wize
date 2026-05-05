@@ -4,9 +4,35 @@ This backend keeps email OTP secrets on the server and exposes:
 
 - `POST /auth/request-otp`
 - `POST /auth/verify-otp`
+- `POST /auth/register`
+- `POST /auth/login`
 - `GET /sync/:userId`
 - `PUT /sync/:userId`
 - `GET /health`
+
+## Register
+
+```json
+{
+  "name": "Martin",
+  "email": "user@example.com",
+  "password": "Wizenance123!",
+  "phone": "+639171234567"
+}
+```
+
+The backend stores the user in Firestore and returns a stable `userId`.
+
+## Login
+
+```json
+{
+  "email": "user@example.com",
+  "password": "Wizenance123!"
+}
+```
+
+Login returns the same `userId`, which lets the app pull the same cloud sync snapshot after reinstalling.
 
 ## Request OTP
 
@@ -82,6 +108,8 @@ FIREBASE_PROJECT_ID=your-firebase-project-id
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-firebase-project-id.iam.gserviceaccount.com
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 FIRESTORE_SYNC_COLLECTION=userSyncSnapshots
+FIRESTORE_USERS_COLLECTION=authUsers
+FIRESTORE_EMAIL_INDEX_COLLECTION=authEmailIndex
 ```
 
 You can also set `FIREBASE_SERVICE_ACCOUNT_JSON` to the full service account JSON instead of separate Firebase values. Keep these values on the backend only.

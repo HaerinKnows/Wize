@@ -33,3 +33,7 @@ services:
         sync: false
       - key: FIRESTORE_SYNC_COLLECTION
         value: "userSyncSnapshots"
+      - key: FIRESTORE_USERS_COLLECTION
+        value: "authUsers"
+      - key: FIRESTORE_EMAIL_INDEX_COLLECTION
+        value: "authEmailIndex"

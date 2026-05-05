@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { createSign, randomInt, timingSafeEqual } from 'node:crypto';
+import { createHash, createSign, randomBytes, randomInt, scryptSync, timingSafeEqual } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, URLSearchParams } from 'node:url';
@@ -42,6 +42,8 @@ const firebaseClientEmail = process.env.FIREBASE_CLIENT_EMAIL;
 const firebasePrivateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 const firebaseServiceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 const firestoreSyncCollection = process.env.FIRESTORE_SYNC_COLLECTION || 'userSyncSnapshots';
+const firestoreUsersCollection = process.env.FIRESTORE_USERS_COLLECTION || 'authUsers';
+const firestoreEmailIndexCollection = process.env.FIRESTORE_EMAIL_INDEX_COLLECTION || 'authEmailIndex';
 
 const otpSessions = new Map();
 const rateLimits = new Map();
@@ -61,6 +63,9 @@ const normalizeEmail = (email) => {
   if (typeof email !== 'string') return '';
   return email.trim().toLowerCase();
 };
+
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const isStrongPassword = (password) => password.length >= 8 && /[A-Za-z]/.test(password) && /\d/.test(password);
 
 const getClientIp = (req) => {
   const forwardedFor = req.headers['x-forwarded-for'];
@@ -211,16 +216,16 @@ const getFirestoreAccessToken = async () => {
   return firestoreAccessToken.token;
 };
 
-const firestoreDocumentUrl = (userId) => {
+const firestoreDocumentUrl = (collection, docId) => {
   const { projectId } = getFirebaseCredential();
   return `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(
     projectId
-  )}/databases/(default)/documents/${encodeURIComponent(firestoreSyncCollection)}/${encodeURIComponent(userId)}`;
+  )}/databases/(default)/documents/${encodeURIComponent(collection)}/${encodeURIComponent(docId)}`;
 };
 
-const firestoreRequest = async (userId, init) => {
+const firestoreRequest = async (collection, docId, init) => {
   const token = await getFirestoreAccessToken();
-  return fetch(firestoreDocumentUrl(userId), {
+  return fetch(firestoreDocumentUrl(collection, docId), {
     ...init,
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -230,20 +235,40 @@ const firestoreRequest = async (userId, init) => {
   });
 };
 
+const readFirestoreJsonDoc = async (collection, docId, fieldName) => {
+  const res = await firestoreRequest(collection, docId, { method: 'GET' });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const details = await res.text();
+    throw new Error(`Firestore read failed: ${details}`);
+  }
+
+  const doc = await res.json();
+  const rawJson = doc.fields?.[fieldName]?.stringValue;
+  return rawJson ? JSON.parse(rawJson) : null;
+};
+
+const writeFirestoreJsonDoc = async (collection, docId, fieldName, value) => {
+  const res = await firestoreRequest(collection, docId, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      fields: {
+        [fieldName]: { stringValue: JSON.stringify(value) },
+        updatedAt: { timestampValue: new Date().toISOString() }
+      }
+    })
+  });
+
+  if (!res.ok) {
+    const details = await res.text();
+    throw new Error(`Firestore write failed: ${details}`);
+  }
+};
+
 const readSyncSnapshot = async (userId) => {
   if (hasFirebaseConfig()) {
-    const res = await firestoreRequest(userId, { method: 'GET' });
-    if (res.status === 404) return emptySnapshot(userId);
-    if (!res.ok) {
-      const details = await res.text();
-      throw new Error(`Firestore read failed: ${details}`);
-    }
-
-    const doc = await res.json();
-    const snapshotJson = doc.fields?.snapshotJson?.stringValue;
-    if (!snapshotJson) return emptySnapshot(userId);
-
-    return { ...emptySnapshot(userId), ...JSON.parse(snapshotJson), userId };
+    const snapshot = await readFirestoreJsonDoc(firestoreSyncCollection, userId, 'snapshotJson');
+    return { ...emptySnapshot(userId), ...(snapshot ?? {}), userId };
   }
 
   try {
@@ -267,21 +292,7 @@ const writeSyncSnapshot = async (userId, body) => {
   const snapshot = normalizeSyncSnapshot(userId, body);
 
   if (hasFirebaseConfig()) {
-    const res = await firestoreRequest(userId, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        fields: {
-          snapshotJson: { stringValue: JSON.stringify(snapshot) },
-          updatedAt: { timestampValue: new Date().toISOString() }
-        }
-      })
-    });
-
-    if (!res.ok) {
-      const details = await res.text();
-      throw new Error(`Firestore write failed: ${details}`);
-    }
-
+    await writeFirestoreJsonDoc(firestoreSyncCollection, userId, 'snapshotJson', snapshot);
     return snapshot;
   }
 
@@ -291,6 +302,127 @@ const writeSyncSnapshot = async (userId, body) => {
 };
 
 const syncStorageProvider = () => (hasFirebaseConfig() ? 'firestore' : 'file');
+
+const emailIndexId = (email) => createHash('sha256').update(normalizeEmail(email)).digest('hex');
+const createUserId = () => `user_${randomBytes(12).toString('hex')}`;
+const createToken = () => randomBytes(32).toString('base64url');
+
+const hashPassword = (password) => {
+  const salt = randomBytes(16).toString('base64url');
+  const hash = scryptSync(password, salt, 64).toString('base64url');
+  return `${salt}:${hash}`;
+};
+
+const verifyPassword = (password, storedHash) => {
+  const [salt, expectedHash] = String(storedHash).split(':');
+  if (!salt || !expectedHash) return false;
+
+  const actualHash = scryptSync(password, salt, 64);
+  const expected = Buffer.from(expectedHash, 'base64url');
+  return expected.length === actualHash.length && timingSafeEqual(expected, actualHash);
+};
+
+const publicUser = (user) => ({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  phone: user.phone
+});
+
+const getAuthUser = async (userId) => {
+  if (!hasFirebaseConfig()) return null;
+  return readFirestoreJsonDoc(firestoreUsersCollection, userId, 'userJson');
+};
+
+const getUserIdByEmail = async (email) => {
+  if (!hasFirebaseConfig()) return null;
+  const index = await readFirestoreJsonDoc(firestoreEmailIndexCollection, emailIndexId(email), 'indexJson');
+  return typeof index?.userId === 'string' ? index.userId : null;
+};
+
+const findAuthUserByEmail = async (email) => {
+  const userId = await getUserIdByEmail(email);
+  return userId ? getAuthUser(userId) : null;
+};
+
+const saveAuthUser = async (user) => {
+  await writeFirestoreJsonDoc(firestoreUsersCollection, user.id, 'userJson', user);
+  await writeFirestoreJsonDoc(firestoreEmailIndexCollection, emailIndexId(user.email), 'indexJson', {
+    email: user.email,
+    userId: user.id
+  });
+};
+
+const handleRegister = async (body) => {
+  if (!hasFirebaseConfig()) {
+    return { status: 503, payload: { error: 'Firebase auth storage is not configured.' } };
+  }
+
+  const name = typeof body.name === 'string' ? body.name.trim() : '';
+  const email = normalizeEmail(body.email);
+  const password = typeof body.password === 'string' ? body.password : '';
+  const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+
+  if (name.length < 2) return { status: 400, payload: { error: 'Name must be at least 2 characters.' } };
+  if (!isValidEmail(email)) return { status: 400, payload: { error: 'Please enter a valid email address.' } };
+  if (!isStrongPassword(password)) {
+    return { status: 400, payload: { error: 'Password must be 8+ chars and include letters and numbers.' } };
+  }
+  if (!phone) return { status: 400, payload: { error: 'Phone number is required.' } };
+
+  const existing = await findAuthUserByEmail(email);
+  if (existing) return { status: 409, payload: { error: 'Email already exists. Please log in instead.' } };
+
+  const now = new Date().toISOString();
+  const user = {
+    id: createUserId(),
+    name,
+    email,
+    phone,
+    passwordHash: hashPassword(password),
+    createdAt: now,
+    updatedAt: now
+  };
+
+  await saveAuthUser(user);
+
+  return {
+    status: 200,
+    payload: {
+      userId: user.id,
+      next: '2fa',
+      user: publicUser(user)
+    }
+  };
+};
+
+const handleLogin = async (body) => {
+  if (!hasFirebaseConfig()) {
+    return { status: 503, payload: { error: 'Firebase auth storage is not configured.' } };
+  }
+
+  const email = normalizeEmail(body.email);
+  const password = typeof body.password === 'string' ? body.password : '';
+
+  if (!isValidEmail(email)) return { status: 400, payload: { error: 'Please enter a valid email address.' } };
+  if (!password) return { status: 400, payload: { error: 'Password is required.' } };
+
+  const user = await findAuthUserByEmail(email);
+  if (!user || !verifyPassword(password, user.passwordHash)) {
+    return { status: 401, payload: { error: 'Invalid credentials. Check email/password or sign up first.' } };
+  }
+
+  return {
+    status: 200,
+    payload: {
+      accessToken: createToken(),
+      refreshToken: createToken(),
+      requires2fa: true,
+      userId: user.id,
+      user: publicUser(user)
+    }
+  };
+};
 
 const sendResendOtp = async (email, code) => {
   const res = await fetch('https://api.resend.com/emails', {
@@ -367,6 +499,18 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  if (req.method === 'POST' && ['/auth/register', '/auth/login'].includes(req.url)) {
+    try {
+      const raw = await readBody(req);
+      const body = raw ? JSON.parse(raw) : {};
+      const result = req.url === '/auth/register' ? await handleRegister(body) : await handleLogin(body);
+      return json(res, result.status, result.payload);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown auth server error.';
+      return json(res, 500, { error: message });
+    }
+  }
+
   if (req.method !== 'POST' || !['/auth/request-otp', '/auth/verify-otp'].includes(req.url)) {
     return json(res, 404, { error: 'Not Found' });
   }
@@ -415,7 +559,12 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { status: 'verified' });
     }
 
-    const email = typeof body.email === 'string' ? body.email.trim() : '';
+    let email = typeof body.email === 'string' ? body.email.trim() : '';
+
+    if (!email || !userId) {
+      const user = userId ? await getAuthUser(userId) : null;
+      email = typeof user?.email === 'string' ? user.email : '';
+    }
 
     if (!email || !userId) {
       return json(res, 400, { error: 'email and userId are required.' });

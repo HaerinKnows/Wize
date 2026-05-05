@@ -47,6 +47,7 @@ const KEY_OTP = 'wizenance_otp_sessions';
 const OTP_TTL_MS = 5 * 60 * 1000;
 
 const SMS_GATEWAY_URL = process.env.EXPO_PUBLIC_SMS_GATEWAY_URL;
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
 const SHOULD_INCLUDE_DEMO_USER = Platform.OS === 'web';
 
 const seedUsers: AuthUser[] = [
@@ -63,6 +64,9 @@ const normalizeEmail = (email: string) => email.trim().toLowerCase();
 const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const isStrongPassword = (password: string) =>
   password.length >= 8 && /[A-Za-z]/.test(password) && /\d/.test(password);
+const isCloudUrl = (url: string) => Boolean(url) && !/localhost|127\.0\.0\.1/i.test(url);
+const baseApiUrl = API_URL.replace(/\/$/, '');
+const canUseCloudAuth = () => isCloudUrl(baseApiUrl);
 
 const normalizePhone = (phone: string) => {
   const trimmed = phone.trim();
@@ -174,6 +178,58 @@ async function emailDomainHasMx(email: string): Promise<boolean> {
   }
 }
 
+async function readApiError(res: Response, fallback: string): Promise<string> {
+  try {
+    const body = (await res.json()) as { error?: string };
+    return body.error ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${baseApiUrl}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    throw new Error(await readApiError(res, `API error: ${res.status}`));
+  }
+
+  return (await res.json()) as T;
+}
+
+async function registerViaApi(
+  name: string,
+  email: string,
+  password: string,
+  phone: string
+): Promise<RegisterResponse> {
+  return apiPost<RegisterResponse>('/auth/register', { name, email, password, phone });
+}
+
+async function loginViaApi(email: string, password: string): Promise<LoginResponse> {
+  return apiPost<LoginResponse>('/auth/login', { email, password });
+}
+
+async function requestOtpViaApi(userId: string): Promise<OtpResponse> {
+  const body = await apiPost<{ status: 'sent'; provider?: string; expiresIn?: number }>('/auth/request-otp', {
+    userId
+  });
+
+  return {
+    status: 'sent',
+    channel: body.provider ? 'gateway' : 'dev',
+    expiresIn: typeof body.expiresIn === 'number' ? body.expiresIn : Math.floor(OTP_TTL_MS / 1000)
+  };
+}
+
+async function verifyOtpViaApi(userId: string, code: string): Promise<void> {
+  await apiPost<{ status: 'verified' }>('/auth/verify-otp', { userId, code });
+}
+
 const getGatewayVerifyUrl = () => {
   if (!SMS_GATEWAY_URL) {
     throw new Error('SMS gateway URL is missing.');
@@ -243,6 +299,10 @@ export const authService = {
 
     parsedPhone = normalizePhone(phone);
 
+    if (canUseCloudAuth()) {
+      return registerViaApi(parsedName, parsedEmail, password, parsedPhone);
+    }
+
     const users = await getUsers();
 
     if (users.some((u) => u.email === parsedEmail)) {
@@ -272,6 +332,12 @@ export const authService = {
       throw new Error('Wrong password format.');
     }
 
+    if (canUseCloudAuth() && !(Platform.OS === 'web' && parsedEmail === 'demo@wizenance.app')) {
+      const res = await loginViaApi(parsedEmail, password);
+      await this.saveSession(res.accessToken, res.refreshToken);
+      return res;
+    }
+
     const users = await getUsers();
     const user = users.find((u) => u.email === parsedEmail && u.password === password);
 
@@ -288,6 +354,10 @@ export const authService = {
   },
 
   async requestOtp(userId: string, method: Method = 'sms'): Promise<OtpResponse> {
+    if (canUseCloudAuth()) {
+      return requestOtpViaApi(userId);
+    }
+
     const users = await getUsers();
     const user = users.find((u) => u.id === userId);
 
@@ -333,6 +403,13 @@ export const authService = {
 
   async verifyOtp(userId: string, code: string): Promise<void> {
     if (code.length !== 6) throw new Error('Invalid OTP');
+
+    if (canUseCloudAuth()) {
+      await verifyOtpViaApi(userId, code);
+      await secureStorage.setItem(KEY_ACCESS, 'verified_access');
+      await secureStorage.setItem(KEY_REFRESH, 'verified_refresh');
+      return;
+    }
 
     const sessions = await getOtpSessions();
     const session = sessions[userId];

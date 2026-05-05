@@ -53,6 +53,8 @@ FIREBASE_PROJECT_ID=your-firebase-project-id
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-firebase-project-id.iam.gserviceaccount.com
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 FIRESTORE_SYNC_COLLECTION=userSyncSnapshots
+FIRESTORE_USERS_COLLECTION=authUsers
+FIRESTORE_EMAIL_INDEX_COLLECTION=authEmailIndex
 ```
 
 You can also set `FIREBASE_SERVICE_ACCOUNT_JSON` to the full service account JSON instead of the three separate Firebase variables.
@@ -66,3 +68,26 @@ Firebase setup:
 5. Put the service account values in your backend environment, not in the mobile app.
 
 Local file storage remains available when Firebase variables are missing. It is useful for testing, but not for real finance data because free hosting filesystems may reset during deploys or restarts.
+
+## Cloud Auth
+
+The backend also stores registered users in Firestore so reinstalling the app can recover the same `userId`.
+
+Routes:
+
+```txt
+POST /auth/register
+POST /auth/login
+POST /auth/request-otp
+POST /auth/verify-otp
+```
+
+Firestore collections:
+
+```txt
+authUsers
+authEmailIndex
+userSyncSnapshots
+```
+
+The mobile app uses backend auth when `EXPO_PUBLIC_API_URL` points to a deployed URL. Local/demo auth remains available for development.

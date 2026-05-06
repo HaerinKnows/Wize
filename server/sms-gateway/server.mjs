@@ -6,8 +6,7 @@ import { fileURLToPath, URLSearchParams } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const loadLocalEnv = () => {
-  const envPath = path.join(__dirname, '.env');
+const loadEnvFile = (envPath) => {
   if (!fs.existsSync(envPath)) return;
 
   const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
@@ -24,6 +23,11 @@ const loadLocalEnv = () => {
       process.env[key] = value.replace(/^['"]|['"]$/g, '');
     }
   }
+};
+
+const loadLocalEnv = () => {
+  loadEnvFile(path.join(__dirname, '..', '..', '.env'));
+  loadEnvFile(path.join(__dirname, '.env'));
 };
 
 loadLocalEnv();
@@ -44,6 +48,10 @@ const firebaseServiceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 const firestoreSyncCollection = process.env.FIRESTORE_SYNC_COLLECTION || 'userSyncSnapshots';
 const firestoreUsersCollection = process.env.FIRESTORE_USERS_COLLECTION || 'authUsers';
 const firestoreEmailIndexCollection = process.env.FIRESTORE_EMAIL_INDEX_COLLECTION || 'authEmailIndex';
+const geminiApiKey = process.env.GEMINI_API_KEY;
+const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const geminiFallbackModel = process.env.GEMINI_FALLBACK_MODEL || 'gemini-2.5-flash-lite';
+const geminiApiBaseUrl = process.env.GEMINI_API_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta';
 
 const otpSessions = new Map();
 const rateLimits = new Map();
@@ -124,6 +132,182 @@ const emptySnapshot = (userId) => ({
 });
 
 const normalizeSnapshotArray = (value) => (Array.isArray(value) ? value : []);
+
+const fallbackSmartTips = [
+  {
+    title: 'Cap Your Top Categories',
+    detail: 'Set weekly spending caps for your top two expense categories.'
+  },
+  {
+    title: 'Smooth Fixed Bills',
+    detail: 'Split fixed bills into daily allocations to avoid month-end spikes.'
+  },
+  {
+    title: 'Review Subscriptions',
+    detail: 'Review recurring subscriptions every 30 days and cancel inactive ones.'
+  },
+  {
+    title: 'Save On Payday',
+    detail: 'Auto-transfer a small savings amount right after salary deposits.'
+  }
+];
+
+const smartTipsResponseSchema = {
+  type: 'object',
+  properties: {
+    tips: {
+      type: 'array',
+      minItems: 4,
+      maxItems: 4,
+      items: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          detail: { type: 'string' }
+        },
+        required: ['title', 'detail']
+      }
+    }
+  },
+  required: ['tips']
+};
+
+const normalizeText = (value, maxLength = 120) => {
+  if (typeof value !== 'string') return '';
+  return value.trim().slice(0, maxLength);
+};
+
+const normalizeMoney = (value) => {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? Math.round(numberValue) : 0;
+};
+
+const compactAccounts = (accounts) =>
+  normalizeSnapshotArray(accounts)
+    .slice(0, 10)
+    .map((account) => ({
+      name: normalizeText(account.name, 80),
+      type: normalizeText(account.type, 40),
+      balanceMinor: normalizeMoney(account.balanceMinor),
+      currency: normalizeText(account.currency, 12),
+      provider: normalizeText(account.provider, 40)
+    }));
+
+const compactTransactions = (transactions) =>
+  normalizeSnapshotArray(transactions)
+    .slice(0, 30)
+    .map((transaction) => ({
+      type: ['income', 'expense', 'transfer'].includes(transaction.type) ? transaction.type : 'expense',
+      category: normalizeText(transaction.category, 60),
+      amountMinor: normalizeMoney(transaction.amountMinor),
+      currency: normalizeText(transaction.currency, 12),
+      timestamp: normalizeText(transaction.timestamp, 40)
+    }));
+
+const compactBudgets = (budgets) =>
+  normalizeSnapshotArray(budgets)
+    .slice(0, 20)
+    .map((budget) => ({
+      category: normalizeText(budget.category, 60),
+      limitAmountMinor: normalizeMoney(budget.limitAmountMinor),
+      spentAmountMinor: normalizeMoney(budget.spentAmountMinor),
+      period: budget.period === 'monthly' ? 'monthly' : 'monthly'
+    }));
+
+const parseGeminiJson = (text) => {
+  const cleaned = String(text)
+    .replace(/^```(?:json)?/i, '')
+    .replace(/```$/i, '')
+    .trim();
+  return JSON.parse(cleaned);
+};
+
+const normalizeSmartTips = (value) => {
+  const tips = normalizeSnapshotArray(value?.tips)
+    .map((tip) => ({
+      title: normalizeText(tip.title, 50),
+      detail: normalizeText(tip.detail, 180)
+    }))
+    .filter((tip) => tip.title && tip.detail)
+    .slice(0, 4);
+
+  return tips.length > 0 ? tips : fallbackSmartTips;
+};
+
+const buildSmartTipsPrompt = (body) =>
+  [
+    'You are Wize, a practical personal finance assistant.',
+    'Generate exactly four concise, personalized money tips from the JSON snapshot.',
+    'Keep advice educational and action-oriented. Do not recommend specific investments, loans, or regulated financial products.',
+    'Return only valid JSON in this shape: {"tips":[{"title":"...","detail":"..."}]}.',
+    '',
+    JSON.stringify({
+      currency: normalizeText(body.currency, 12),
+      accounts: compactAccounts(body.accounts),
+      transactions: compactTransactions(body.transactions),
+      budgets: compactBudgets(body.budgets)
+    })
+  ].join('\n');
+
+const requestGeminiSmartTips = async (model, body) => {
+  const url = `${geminiApiBaseUrl}/models/${encodeURIComponent(model)}:generateContent`;
+  const geminiResponse = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': geminiApiKey
+    },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: buildSmartTipsPrompt(body) }] }],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: smartTipsResponseSchema,
+        temperature: 0.4,
+        maxOutputTokens: 1200
+      }
+    })
+  });
+
+  if (!geminiResponse.ok) {
+    const details = await geminiResponse.text();
+    const error = new Error('Gemini request failed.');
+    error.status = geminiResponse.status;
+    error.details = details;
+    throw error;
+  }
+
+  const data = await geminiResponse.json();
+  const text = normalizeSnapshotArray(data.candidates?.[0]?.content?.parts)
+    .map((part) => (typeof part.text === 'string' ? part.text : ''))
+    .join('')
+    .trim();
+
+  return {
+    tips: normalizeSmartTips(parseGeminiJson(text)),
+    source: 'gemini',
+    model
+  };
+};
+
+const generateSmartTips = async (body) => {
+  if (!geminiApiKey) {
+    return { tips: fallbackSmartTips, source: 'fallback' };
+  }
+
+  try {
+    return await requestGeminiSmartTips(geminiModel, body);
+  } catch (error) {
+    if (
+      [429, 503].includes(Number(error?.status)) &&
+      geminiFallbackModel &&
+      geminiFallbackModel !== geminiModel
+    ) {
+      return requestGeminiSmartTips(geminiFallbackModel, body);
+    }
+
+    throw error;
+  }
+};
 
 const normalizeSyncSnapshot = (userId, body) => ({
   userId,
@@ -470,7 +654,13 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, {
       ok: true,
       service: 'wizenance-email-gateway',
-      syncStorage: syncStorageProvider()
+      syncStorage: syncStorageProvider(),
+      ai: {
+        provider: 'gemini',
+        configured: Boolean(geminiApiKey),
+        model: geminiModel,
+        fallbackModel: geminiFallbackModel
+      }
     });
   }
 
@@ -508,6 +698,23 @@ const server = http.createServer(async (req, res) => {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown auth server error.';
       return json(res, 500, { error: message });
+    }
+  }
+
+  if (req.method === 'POST' && req.url === '/ai/smart-tips') {
+    try {
+      const raw = await readBody(req);
+      const body = raw ? JSON.parse(raw) : {};
+      return json(res, 200, await generateSmartTips(body));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown Gemini server error.';
+      const details = error instanceof Error && typeof error.details === 'string' ? error.details : undefined;
+      return json(res, 502, {
+        error: message,
+        details,
+        tips: fallbackSmartTips,
+        source: 'fallback'
+      });
     }
   }
 
@@ -599,6 +806,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(port, () => {
-  // eslint-disable-next-line no-console
   console.log(`[email-gateway] listening on http://localhost:${port}`);
 });

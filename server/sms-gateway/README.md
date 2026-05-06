@@ -6,6 +6,7 @@ This backend keeps email OTP secrets on the server and exposes:
 - `POST /auth/verify-otp`
 - `POST /auth/register`
 - `POST /auth/login`
+- `POST /ai/smart-tips`
 - `GET /sync/:userId`
 - `PUT /sync/:userId`
 - `GET /health`
@@ -54,17 +55,41 @@ The gateway generates the OTP, sends it through Resend, and stores it in memory 
 }
 ```
 
+## Gemini Smart Tips
+
+```json
+{
+  "accounts": [],
+  "transactions": [],
+  "budgets": [],
+  "currency": "PHP"
+}
+```
+
+The gateway calls Gemini server-side and returns:
+
+```json
+{
+  "source": "gemini",
+  "model": "gemini-2.5-flash",
+  "tips": [{ "title": "Cap Groceries", "detail": "..." }]
+}
+```
+
+If Gemini is not configured, the endpoint returns built-in fallback tips.
+
 ## Setup
 
 1. Copy `.env.example` values into your server env.
 2. Set `RESEND_API_KEY`.
-3. Start server:
+3. Set `GEMINI_API_KEY`.
+4. Start server:
 
 ```bash
-node server/sms-gateway/server.mjs
+npm run start:sms-gateway
 ```
 
-4. In app `.env`, set:
+5. In app `.env`, set:
 
 ```bash
 EXPO_PUBLIC_SMS_GATEWAY_URL=http://localhost:4000/auth/request-otp
@@ -120,6 +145,9 @@ This repo includes `render.yaml`. In Render, create a Blueprint from the GitHub 
 
 ```bash
 RESEND_API_KEY=your_server_only_resend_key
+GEMINI_API_KEY=your_server_only_gemini_key
+GEMINI_MODEL=gemini-2.5-flash
+GEMINI_FALLBACK_MODEL=gemini-2.5-flash-lite
 ```
 
 After Render creates the service, set the app variable to your public HTTPS endpoint:

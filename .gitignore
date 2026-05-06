@@ -4,6 +4,7 @@ dist
 coverage
 *.log
 .env
+.certs
 server/sms-gateway/data
 *firebase-adminsdk*.json
 serviceAccount*.json

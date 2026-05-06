@@ -1,14 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Card } from '@/components/Card';
-import { Chip } from '@/components/Chip';
 import { Input } from '@/components/Input';
 import { RoundedButton } from '@/components/RoundedButton';
 import { Screen } from '@/screens/Screen';
 import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
-import { spacing, ThemeColors, typography } from '@/design/tokens';
+import { radius, spacing, ThemeColors, typography } from '@/design/tokens';
 import { fromMajor, getPreferredCurrency } from '@/utils/currency';
 import { toCategoryLabel } from '@/utils/category';
 import { TxType } from '@/types/domain';
@@ -48,7 +47,8 @@ const expenseTemplates: CategoryTemplate[] = [
   { key: 'baby', label: 'Baby', emoji: '👶' },
   { key: 'vegetable', label: 'Vegetable', emoji: '🥕' },
   { key: 'fruit', label: 'Fruit', emoji: '🍇' },
-  { key: 'bills', label: 'Bills', emoji: '🧾' }
+  { key: 'bills', label: 'Bills', emoji: '🧾' },
+  { key: 'other', label: 'Other', emoji: '❓' }
 ];
 
 const incomeTemplates: CategoryTemplate[] = [
@@ -61,7 +61,8 @@ const incomeTemplates: CategoryTemplate[] = [
   { key: 'gift income', label: 'Gift Income', emoji: '🎁' },
   { key: 'refund', label: 'Refund', emoji: '↩️' },
   { key: 'rental', label: 'Rental', emoji: '🏘️' },
-  { key: 'other income', label: 'Other Income', emoji: '💰' }
+  { key: 'other income', label: 'Other Income', emoji: '💰' },
+  { key: 'other', label: 'Other', emoji: '❓' }
 ];
 
 export default function AddTransactionScreen() {
@@ -74,15 +75,19 @@ export default function AddTransactionScreen() {
 
   const [type, setType] = useState<TxType>('expense');
   const [category, setCategory] = useState('');
+  const [isOther, setIsOther] = useState(false);
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
   const [fromAccount, setFromAccount] = useState(accounts[0]?.id ?? '');
   const [toAccount, setToAccount] = useState(accounts[1]?.id ?? accounts[0]?.id ?? '');
   const [error, setError] = useState('');
 
+  const [categoryModal, setCategoryModal] = useState(false);
+  const [fromAccountModal, setFromAccountModal] = useState(false);
+  const [toAccountModal, setToAccountModal] = useState(false);
+
   const accountName = useMemo(() => Object.fromEntries(accounts.map((a) => [a.id, a.name])), [accounts]);
   const activeTemplates = type === 'income' ? incomeTemplates : expenseTemplates;
-  const selectedCategory = toCategoryLabel(category.trim());
 
   const onSave = () => {
     setError('');
@@ -121,184 +126,245 @@ export default function AddTransactionScreen() {
     router.replace('/dashboard');
   };
 
-  const setTemplateType = (nextType: 'expense' | 'income') => {
-    setType(nextType);
+  const handleCategorySelect = (item: CategoryTemplate) => {
+    if (item.key === 'other') {
+      setIsOther(true);
+      setCategory('');
+    } else {
+      setIsOther(false);
+      setCategory(item.label);
+    }
+    setCategoryModal(false);
   };
 
   return (
     <Screen>
-      <Text style={styles.title}>Add Transaction</Text>
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <Text style={styles.title}>Add Transaction</Text>
 
-      <Card header="Start with a template, customize freely">
-        <View style={styles.templateShell}>
-          <View style={styles.segmentWrap}>
-            <Pressable
-              style={[styles.segmentButton, type === 'expense' && styles.segmentButtonSelected]}
-              onPress={() => setTemplateType('expense')}
-            >
-              <Text style={[styles.segmentText, type === 'expense' && styles.segmentTextSelected]}>Expenses</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.segmentButton, type === 'income' && styles.segmentButtonSelected]}
-              onPress={() => setTemplateType('income')}
-            >
-              <Text style={[styles.segmentText, type === 'income' && styles.segmentTextSelected]}>Income</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.transferChipRow}>
-            <Chip label="Transfer" selected={type === 'transfer'} onPress={() => setType('transfer')} />
-            {type === 'transfer' ? <Text style={styles.transferHint}>Transfer uses category "Transfer".</Text> : null}
-          </View>
-
-          {type !== 'transfer' ? (
-            <View style={styles.templateGrid}>
-              {activeTemplates.map((item) => {
-                const selected = selectedCategory === toCategoryLabel(item.label);
-                return (
-                  <Pressable
-                    key={item.key}
-                    style={styles.templateCell}
-                    onPress={() => {
-                      setCategory(item.label);
-                    }}
-                  >
-                    <View style={[styles.templateIconWrap, selected && styles.templateIconWrapSelected]}>
-                      <Text style={styles.templateEmoji}>{item.emoji}</Text>
-                    </View>
-                    <Text style={[styles.templateLabel, selected && styles.templateLabelSelected]}>{item.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : null}
+        <View style={styles.segmentWrap}>
+          <Pressable
+            style={[styles.segmentButton, type === 'expense' && styles.segmentButtonSelected]}
+            onPress={() => setType('expense')}
+          >
+            <Text style={[styles.segmentText, type === 'expense' && styles.segmentTextSelected]}>Expenses</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.segmentButton, type === 'income' && styles.segmentButtonSelected]}
+            onPress={() => setType('income')}
+          >
+            <Text style={[styles.segmentText, type === 'income' && styles.segmentTextSelected]}>Income</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.segmentButton, type === 'transfer' && styles.segmentButtonSelected]}
+            onPress={() => setType('transfer')}
+          >
+            <Text style={[styles.segmentText, type === 'transfer' && styles.segmentTextSelected]}>Transfer</Text>
+          </Pressable>
         </View>
-      </Card>
 
-      <Card header="Account">
-        <View style={styles.rowWrap}>
-          {accounts.map((acc) => (
-            <Chip
-              key={acc.id}
-              label={acc.name}
-              selected={fromAccount === acc.id}
-              onPress={() => setFromAccount(acc.id)}
-            />
-          ))}
-        </View>
-        {type === 'transfer' ? (
-          <View style={styles.transferWrap}>
-            <Text style={styles.caption}>Transfer To</Text>
-            <View style={styles.rowWrap}>
-              {accounts.map((acc) => (
-                <Chip key={`to_${acc.id}`} label={acc.name} selected={toAccount === acc.id} onPress={() => setToAccount(acc.id)} />
-              ))}
+        <Card header="Account">
+          <Pressable style={styles.dropdown} onPress={() => setFromAccountModal(true)}>
+            <Text style={styles.dropdownText}>{accountName[fromAccount] || 'Select Account'}</Text>
+            <Text style={styles.dropdownArrow}>▼</Text>
+          </Pressable>
+
+          {type === 'transfer' && (
+            <View style={styles.transferTarget}>
+              <Text style={styles.caption}>Transfer To</Text>
+              <Pressable style={styles.dropdown} onPress={() => setToAccountModal(true)}>
+                <Text style={styles.dropdownText}>{accountName[toAccount] || 'Select Account'}</Text>
+                <Text style={styles.dropdownArrow}>▼</Text>
+              </Pressable>
             </View>
-          </View>
-        ) : null}
-      </Card>
+          )}
+        </Card>
 
-      <Input
-        placeholder={type === 'transfer' ? 'Transfer category is automatic' : 'Category (template or custom)'}
-        value={type === 'transfer' ? 'Transfer' : category}
-        onChangeText={setCategory}
-        editable={type !== 'transfer'}
+        {type !== 'transfer' && (
+          <Card header="Category">
+            <Pressable style={styles.dropdown} onPress={() => setCategoryModal(true)}>
+              <Text style={styles.dropdownText}>{category || (isOther ? 'Other (type below)' : 'Select Category')}</Text>
+              <Text style={styles.dropdownArrow}>▼</Text>
+            </Pressable>
+            {isOther && (
+              <Input
+                placeholder="Type custom category..."
+                value={category}
+                onChangeText={setCategory}
+                autoFocus
+                style={styles.customCategoryInput}
+              />
+            )}
+          </Card>
+        )}
+
+        <Card header="Details">
+          <Input placeholder="Amount" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
+          <Input placeholder="Notes (optional)" value={notes} onChangeText={setNotes} />
+        </Card>
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <RoundedButton label="Save Transaction" onPress={onSave} />
+        <RoundedButton label="Cancel" variant="secondary" onPress={() => router.back()} />
+      </ScrollView>
+
+      {/* Modals for Dropdowns */}
+      <SelectionModal
+        visible={categoryModal}
+        title="Select Category"
+        data={activeTemplates}
+        onSelect={handleCategorySelect}
+        onClose={() => setCategoryModal(false)}
+        renderItem={(item) => (
+          <View style={styles.modalRow}>
+            <Text style={styles.modalEmoji}>{item.emoji}</Text>
+            <Text style={styles.modalLabel}>{item.label}</Text>
+          </View>
+        )}
       />
-      <Input placeholder="Amount" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
-      <Input placeholder="Notes (shown in Recent Transactions)" value={notes} onChangeText={setNotes} />
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <SelectionModal
+        visible={fromAccountModal}
+        title="Select Source Account"
+        data={accounts}
+        onSelect={(acc) => {
+          setFromAccount(acc.id);
+          setFromAccountModal(false);
+        }}
+        onClose={() => setFromAccountModal(false)}
+        renderItem={(acc) => (
+          <View style={styles.modalRow}>
+            <Text style={styles.modalLabel}>{acc.name}</Text>
+          </View>
+        )}
+      />
 
-      <RoundedButton label="Save Transaction" onPress={onSave} />
-      <RoundedButton label="Cancel" variant="secondary" onPress={() => router.back()} />
+      <SelectionModal
+        visible={toAccountModal}
+        title="Select Destination"
+        data={accounts}
+        onSelect={(acc) => {
+          setToAccount(acc.id);
+          setToAccountModal(false);
+        }}
+        onClose={() => setToAccountModal(false)}
+        renderItem={(acc) => (
+          <View style={styles.modalRow}>
+            <Text style={styles.modalLabel}>{acc.name}</Text>
+          </View>
+        )}
+      />
     </Screen>
+  );
+}
+
+function SelectionModal<T>({
+  visible,
+  title,
+  data,
+  onSelect,
+  onClose,
+  renderItem
+}: {
+  visible: boolean;
+  title: string;
+  data: T[];
+  onSelect: (item: T) => void;
+  onClose: () => void;
+  renderItem: (item: T) => React.ReactNode;
+}) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.modalBackdrop} onPress={onClose}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>{title}</Text>
+          <FlatList
+            data={data}
+            keyExtractor={(_, i) => i.toString()}
+            renderItem={({ item }) => (
+              <Pressable style={styles.modalItem} onPress={() => onSelect(item)}>
+                {renderItem(item)}
+              </Pressable>
+            )}
+            style={styles.modalList}
+          />
+          <RoundedButton label="Close" variant="secondary" onPress={onClose} />
+        </View>
+      </Pressable>
+    </Modal>
   );
 }
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    title: { ...typography.h2, color: colors.textPrimary },
-    templateShell: {
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: colors.line,
-      backgroundColor: colors.bg,
-      padding: spacing.md,
-      gap: spacing.md
+    scroll: {
+      gap: spacing.md,
+      paddingBottom: spacing.xl
     },
+    title: { ...typography.h2, color: colors.textPrimary },
     segmentWrap: {
-      minHeight: 46,
-      borderRadius: 12,
+      flexDirection: 'row',
+      borderRadius: 14,
+      backgroundColor: colors.card,
       borderWidth: 1,
       borderColor: colors.line,
-      overflow: 'hidden',
-      flexDirection: 'row'
+      overflow: 'hidden'
     },
     segmentButton: {
       flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.card
+      paddingVertical: spacing.md,
+      alignItems: 'center'
     },
     segmentButtonSelected: {
       backgroundColor: colors.primary
     },
-    segmentText: {
-      ...typography.body,
-      color: colors.textPrimary
-    },
-    segmentTextSelected: {
-      color: '#FFFFFF',
-      fontWeight: '700'
-    },
-    transferChipRow: {
+    segmentText: { ...typography.body, color: colors.textSecondary },
+    segmentTextSelected: { color: '#FFFFFF', fontWeight: '700' },
+    dropdown: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: spacing.sm
-    },
-    transferHint: {
-      ...typography.caption,
-      color: colors.textSecondary,
-      flex: 1
-    },
-    templateGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap'
-    },
-    templateCell: {
-      width: '25%',
-      alignItems: 'center',
-      paddingVertical: spacing.sm,
-      gap: spacing.xs
-    },
-    templateIconWrap: {
-      width: 52,
-      height: 52,
-      borderRadius: 26,
-      alignItems: 'center',
-      justifyContent: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.bg,
       borderWidth: 1,
       borderColor: colors.line,
-      backgroundColor: colors.card
+      borderRadius: 14,
+      padding: spacing.md,
+      minHeight: 52
     },
-    templateIconWrapSelected: {
-      borderColor: colors.primary,
-      backgroundColor: colors.primarySoft
-    },
-    templateEmoji: {
-      fontSize: 21
-    },
-    templateLabel: {
-      ...typography.caption,
-      color: colors.textSecondary,
-      textAlign: 'center'
-    },
-    templateLabelSelected: {
-      color: colors.textPrimary,
-      fontWeight: '700'
-    },
-    rowWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-    transferWrap: { marginTop: spacing.md, gap: spacing.sm },
+    dropdownText: { ...typography.body, color: colors.textPrimary },
+    dropdownArrow: { fontSize: 12, color: colors.textSecondary },
+    transferTarget: { marginTop: spacing.md, gap: spacing.sm },
     caption: { ...typography.caption, color: colors.textSecondary },
-    error: { ...typography.caption, color: colors.danger }
+    customCategoryInput: { marginTop: spacing.sm },
+    error: { ...typography.caption, color: colors.danger, textAlign: 'center' },
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: colors.modalBackdrop,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: spacing.xl
+    },
+    modalContent: {
+      width: '100%',
+      maxWidth: 400,
+      backgroundColor: colors.card,
+      borderRadius: 24,
+      padding: spacing.lg,
+      gap: spacing.md,
+      maxHeight: '80%'
+    },
+    modalTitle: { ...typography.h3, color: colors.textPrimary, textAlign: 'center' },
+    modalList: { flexGrow: 0 },
+    modalItem: {
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.line
+    },
+    modalRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+    modalEmoji: { fontSize: 20 },
+    modalLabel: { ...typography.body, color: colors.textPrimary }
   });

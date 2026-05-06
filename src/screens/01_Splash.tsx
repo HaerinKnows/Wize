@@ -29,11 +29,24 @@ export default function SplashScreen() {
   useEffect(() => {
     if (!hydrated) return;
     const t = setTimeout(() => {
-      router.replace(isAuthenticated ? '/dashboard' : '/auth-choice');
+      const mpinSet = useAuthStore.getState().mpinSet;
+      const isAuthenticated = useAuthStore.getState().isAuthenticated;
+
+      if (isAuthenticated && mpinSet) {
+        // Even if authenticated in store, we want to force MPIN unlock on app start
+        router.replace('/mpin');
+      } else if (isAuthenticated) {
+        router.replace('/dashboard');
+      } else if (mpinSet) {
+        // Has account but not authenticated this session
+        router.replace('/mpin');
+      } else {
+        router.replace('/auth-choice');
+      }
     }, 900);
 
     return () => clearTimeout(t);
-  }, [hydrated, isAuthenticated]);
+  }, [hydrated]);
 
   return (
     <Screen style={styles.center}>

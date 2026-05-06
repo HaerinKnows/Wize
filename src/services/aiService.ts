@@ -71,3 +71,28 @@ export async function getCachedSmartTips() {
     return null;
   }
 }
+export type ChatMessage = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
+type ChatResponse = {
+  text: string;
+  source: 'gemini' | 'fallback';
+  model?: string;
+};
+
+export async function chat(
+  history: ChatMessage[],
+  snapshot: {
+    accounts: Account[];
+    transactions: Transaction[];
+    budgets: Budget[];
+    currency: string;
+  }
+) {
+  return apiRequest<ChatResponse>('/ai/chat', {
+    method: 'POST',
+    body: JSON.stringify({ history, snapshot })
+  });
+}

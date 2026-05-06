@@ -19,10 +19,11 @@ type MenuItem = {
 };
 
 const menuItems: MenuItem[] = [
+  { label: 'Wize AI Chat', route: '/ai-chat' },
+  { label: 'Smart Tips', route: '/smart-tips' },
   { label: 'Achievements', route: '/achievements' },
   { label: 'Analytics', route: '/analytics' },
   { label: 'Goal Setter', route: '/goal-setter' },
-  { label: 'Smart Tips', route: '/smart-tips' },
   { label: 'Budgets', route: '/budgets' },
   { label: 'Scan SMS', route: '/scan-sms' },
   { label: 'Add Transaction', route: '/add-transaction' },
@@ -109,6 +110,16 @@ export default function DashboardMainScreen() {
       </Card>
 
       <Text style={styles.sync}>Sync: {lastSync ? new Date(lastSync).toLocaleString() : 'Pending'}</Text>
+
+      <Pressable style={styles.aiChatBanner} onPress={() => router.push('/ai-chat')}>
+        <View style={styles.aiIconWrap}>
+          <Text style={styles.aiEmoji}>🤖</Text>
+        </View>
+        <View>
+          <Text style={styles.aiChatTitle}>Chat with Wize AI</Text>
+          <Text style={styles.aiChatSubtitle}>Get personalized finance advice</Text>
+        </View>
+      </Pressable>
 
       <FloatingActionButton onPress={() => router.push('/add-transaction')} />
 
@@ -242,5 +253,34 @@ const createStyles = (colors: ThemeColors) =>
     },
     danger: {
       color: colors.danger
+    },
+    aiChatBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      backgroundColor: colors.primary,
+      padding: spacing.md,
+      borderRadius: 18,
+      marginTop: spacing.md
+    },
+    aiIconWrap: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      alignItems: 'center',
+      justifyContent: 'center'
+    },
+    aiEmoji: {
+      fontSize: 22
+    },
+    aiChatTitle: {
+      ...typography.body,
+      color: '#FFFFFF',
+      fontWeight: '700'
+    },
+    aiChatSubtitle: {
+      ...typography.caption,
+      color: 'rgba(255,255,255,0.8)'
     }
   });

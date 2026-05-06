@@ -249,6 +249,60 @@ const buildSmartTipsPrompt = (body) =>
     })
   ].join('\n');
 
+const buildChatPrompt = (history, snapshot) => {
+  const chatContext = history.slice(-6).map((m) => `${m.role === 'user' ? 'User' : 'Wize'}: ${m.content}`).join('\n');
+  return [
+    'You are Wize, a friendly and practical personal finance assistant for students and young professionals.',
+    'Use the user\'s financial snapshot to provide personalized, helpful answers to their questions.',
+    'Keep responses encouraging, concise (max 2-3 paragraphs), and focused on financial literacy.',
+    'Never provide specific investment advice or recommend regulated products.',
+    '',
+    '### User Financial Snapshot',
+    JSON.stringify({
+      currency: normalizeText(snapshot.currency, 12),
+      accounts: compactAccounts(snapshot.accounts),
+      transactions: compactTransactions(snapshot.transactions),
+      budgets: compactBudgets(snapshot.budgets)
+    }),
+    '',
+    '### Conversation History',
+    chatContext,
+    '',
+    'Wize:'
+  ].join('\n');
+};
+
+const requestGeminiChat = async (model, history, snapshot) => {
+  const url = `${geminiApiBaseUrl}/models/${encodeURIComponent(model)}:generateContent`;
+  const geminiResponse = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': geminiApiKey
+    },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: buildChatPrompt(history, snapshot) }] }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 1000
+      }
+    })
+  });
+
+  if (!geminiResponse.ok) {
+    const details = await geminiResponse.text();
+    const error = new Error('Gemini Chat failed.');
+    error.status = geminiResponse.status;
+    error.details = details;
+    throw error;
+  }
+
+  const data = await geminiResponse.json();
+  const text = (data.candidates?.[0]?.content?.parts?.[0]?.text || 'I am sorry, I am having trouble connecting right now.').trim();
+
+  return { text, source: 'gemini', model };
+};
+
 const requestGeminiSmartTips = async (model, body) => {
   const url = `${geminiApiBaseUrl}/models/${encodeURIComponent(model)}:generateContent`;
   const geminiResponse = await fetch(url, {
@@ -305,6 +359,25 @@ const generateSmartTips = async (body) => {
       return requestGeminiSmartTips(geminiFallbackModel, body);
     }
 
+    throw error;
+  }
+};
+
+const generateChatResponse = async (history, snapshot) => {
+  if (!geminiApiKey) {
+    return { text: 'Gemini AI is currently not configured on this server.', source: 'fallback' };
+  }
+
+  try {
+    return await requestGeminiChat(geminiModel, history, snapshot);
+  } catch (error) {
+    if (
+      [429, 503].includes(Number(error?.status)) &&
+      geminiFallbackModel &&
+      geminiFallbackModel !== geminiModel
+    ) {
+      return requestGeminiChat(geminiFallbackModel, history, snapshot);
+    }
     throw error;
   }
 };
@@ -715,6 +788,18 @@ const server = http.createServer(async (req, res) => {
         tips: fallbackSmartTips,
         source: 'fallback'
       });
+    }
+  }
+
+  if (req.method === 'POST' && req.url === '/ai/chat') {
+    try {
+      const raw = await readBody(req);
+      const body = raw ? JSON.parse(raw) : {};
+      const { history, snapshot } = body;
+      return json(res, 200, await generateChatResponse(history || [], snapshot || {}));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown Gemini chat error.';
+      return json(res, 500, { error: message, text: 'I am sorry, I encountered an error. Please try again.' });
     }
   }
 

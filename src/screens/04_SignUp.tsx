@@ -85,7 +85,7 @@ export default function SignUpScreen() {
     setSubmitting(true);
     try {
       const res = await authService.register(name, email, password, withCountryCode);
-      startAuth(res.userId);
+      startAuth(res.userId, true);
       router.push('/two-factor');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to register.');

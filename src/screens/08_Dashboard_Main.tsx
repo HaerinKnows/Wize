@@ -95,7 +95,19 @@ export default function DashboardMainScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      <Card header="Recent Transactions">
+      <Card
+        header="Recent Transactions"
+        rightAccessory={
+          <Pressable
+            accessibilityLabel="Add transaction"
+            accessibilityRole="button"
+            onPress={() => router.push('/add-transaction')}
+            style={styles.addInlineButton}
+          >
+            <Text style={styles.addInlineButtonText}>+</Text>
+          </Pressable>
+        }
+      >
         {recentTransactions.length === 0 ? <Text style={styles.empty}>No transactions yet.</Text> : null}
         {recentTransactions.map((txn) => (
           <TransactionRow
@@ -113,15 +125,13 @@ export default function DashboardMainScreen() {
 
       <Pressable style={styles.aiChatBanner} onPress={() => router.push('/ai-chat')}>
         <View style={styles.aiIconWrap}>
-          <Text style={styles.aiEmoji}>🤖</Text>
+          <Text style={styles.aiLogoText}>W</Text>
         </View>
         <View>
           <Text style={styles.aiChatTitle}>Chat with Wize AI</Text>
           <Text style={styles.aiChatSubtitle}>Get personalized finance advice</Text>
         </View>
       </Pressable>
-
-      <FloatingActionButton onPress={() => router.push('/add-transaction')} />
 
       <RNModal transparent visible={menuOpen} animationType="slide" onRequestClose={() => setMenuOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setMenuOpen(false)}>
@@ -274,6 +284,11 @@ const createStyles = (colors: ThemeColors) =>
     aiEmoji: {
       fontSize: 22
     },
+    aiLogoText: {
+      ...typography.h3,
+      color: '#FFFFFF',
+      fontWeight: '900'
+    },
     aiChatTitle: {
       ...typography.body,
       color: '#FFFFFF',
@@ -282,5 +297,19 @@ const createStyles = (colors: ThemeColors) =>
     aiChatSubtitle: {
       ...typography.caption,
       color: 'rgba(255,255,255,0.8)'
+    },
+    addInlineButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center'
+    },
+    addInlineButtonText: {
+      color: '#FFFFFF',
+      fontSize: 20,
+      fontWeight: '700',
+      lineHeight: 22
     }
   });

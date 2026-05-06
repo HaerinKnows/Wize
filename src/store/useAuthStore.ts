@@ -4,13 +4,14 @@ import { createJSONStorage, persist } from 'zustand/middleware.js';
 
 type AuthState = {
   isAuthenticated: boolean;
+  isSignup: boolean;
   userId?: string;
   pendingUserId?: string;
   twoFactorVerified: boolean;
   mpinSet: boolean;
   biometricEnabled: boolean;
   biometricByUser: Record<string, boolean>;
-  startAuth: (userId: string) => void;
+  startAuth: (userId: string, isSignup: boolean) => void;
   verify2fa: () => void;
   completeAuth: () => void;
   setMpin: () => void;
@@ -22,13 +23,15 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       isAuthenticated: false,
+      isSignup: false,
       twoFactorVerified: false,
       mpinSet: false,
       biometricEnabled: false,
       biometricByUser: {},
-      startAuth: (userId) =>
+      startAuth: (userId, isSignup) =>
         set((state) => ({
           pendingUserId: userId,
+          isSignup,
           twoFactorVerified: false,
           isAuthenticated: false,
           biometricEnabled: state.biometricByUser[userId] ?? false

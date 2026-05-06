@@ -5,18 +5,24 @@ import { useTheme } from '@/theme/ThemeProvider';
 
 type Props = ViewProps & {
   header?: string;
+  rightAccessory?: React.ReactNode;
   footer?: React.ReactNode;
   tappable?: boolean;
   onPress?: () => void;
 };
 
-export function Card({ header, footer, tappable, onPress, style, children, ...rest }: Props) {
+export function Card({ header, rightAccessory, footer, tappable, onPress, style, children, ...rest }: Props) {
   const { colors } = useTheme();
   const styles = createStyles(colors);
 
   const content = (
     <View style={[styles.card, style]} {...rest}>
-      {header ? <Text style={styles.header}>{header}</Text> : null}
+      {header || rightAccessory ? (
+        <View style={styles.headerContainer}>
+          {header ? <Text style={styles.header}>{header}</Text> : <View />}
+          {rightAccessory}
+        </View>
+      ) : null}
       {children}
       {footer}
     </View>
@@ -36,9 +42,14 @@ const createStyles = (colors: ThemeColors) =>
       padding: spacing.lg,
       ...shadow.card
     },
+    headerContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.sm
+    },
     header: {
       ...typography.caption,
-      color: colors.textSecondary,
-      marginBottom: spacing.sm
+      color: colors.textSecondary
     }
   });

@@ -22,6 +22,7 @@ export default function MpinScreen() {
   const [mode, setMode] = useState<MpinMode>('loading');
 
   const userId = useAuthStore((s) => s.userId);
+  const isSignup = useAuthStore((s) => s.isSignup);
   const markMpinConfigured = useAuthStore((s) => s.setMpin);
   const completeAuth = useAuthStore((s) => s.completeAuth);
 
@@ -43,6 +44,12 @@ export default function MpinScreen() {
         setLength(existingLength);
         setMode('verify');
       } else {
+        if (!isSignup) {
+          // Point 2: If logging in and no MPIN on this device, skip the "Create MPIN" screen
+          completeAuth();
+          router.replace('/dashboard');
+          return;
+        }
         setMode('setup');
       }
     };

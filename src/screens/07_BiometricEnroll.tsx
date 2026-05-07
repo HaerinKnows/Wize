@@ -31,7 +31,7 @@ export default function BiometricEnrollScreen() {
   };
 
   return (
-    <Screen style={styles.center}>
+    <Screen style={styles.center} hideBottomBar={true}>
       <View style={styles.panel}>
         <Text style={styles.title}>Enroll Biometric</Text>
         <Text style={styles.body}>{message}</Text>

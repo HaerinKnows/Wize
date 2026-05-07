@@ -95,7 +95,7 @@ export default function SignUpScreen() {
   };
 
   return (
-    <Screen style={styles.center}>
+    <Screen style={styles.center} hideBottomBar={true}>
       <Card style={styles.card}>
         <Text style={styles.title}>Create account</Text>
         <Input placeholder="Full name" value={name} onChangeText={setName} />

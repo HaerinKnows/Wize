@@ -37,7 +37,7 @@ export default function LoginEmailScreen() {
   };
 
   return (
-    <Screen style={styles.center}>
+    <Screen style={styles.center} hideBottomBar={true}>
       <Card style={styles.card}>
         <Text style={styles.title}>Login</Text>
         <Input

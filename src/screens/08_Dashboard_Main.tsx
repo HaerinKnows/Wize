@@ -51,6 +51,7 @@ export default function DashboardMainScreen() {
   const clearSyncMessage = useAppStore((s) => s.clearSyncMessage);
   const logout = useAuthStore((s) => s.logout);
   const userId = useAuthStore((s) => s.userId);
+  const preferredCurrency = useAppStore((s) => s.preferredCurrency);
 
   const recentTransactions = useMemo(() => {
     return allTransactions.filter((t) => (t.ownerUserId ?? 'user_demo') === userId).slice(0, 6);
@@ -87,9 +88,7 @@ export default function DashboardMainScreen() {
   return (
     <Screen>
       <View style={styles.header}>
-        <Pressable accessibilityLabel="Open menu" accessibilityRole="button" onPress={() => setMenuOpen(true)} style={styles.iconButton}>
-          <HamburgerIcon color={colors.textPrimary} />
-        </Pressable>
+        <View style={styles.headerSpacer} />
         <Text style={styles.title}>Wizenance</Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -114,7 +113,7 @@ export default function DashboardMainScreen() {
             category={txn.category}
             amountMinor={txn.amountMinor}
             timestamp={txn.timestamp}
-            currency={txn.currency}
+            currency={txn.currency || preferredCurrency}
             notes={txn.notes}
           />
         ))}
@@ -131,33 +130,6 @@ export default function DashboardMainScreen() {
           <Text style={styles.aiChatSubtitle}>Get personalized finance advice</Text>
         </View>
       </Pressable>
-
-      <RNModal transparent visible={menuOpen} animationType="slide" onRequestClose={() => setMenuOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setMenuOpen(false)}>
-          <Pressable style={styles.drawer}>
-            <Text style={styles.drawerTitle}>Menu</Text>
-
-            <Text style={styles.sectionTitle}>Appearance</Text>
-            <View style={styles.themeRow}>
-              <Chip label="System" selected={mode === 'system'} onPress={() => void onSetTheme('system')} />
-              <Chip label="Light" selected={mode === 'light'} onPress={() => void onSetTheme('light')} />
-              <Chip label="Dark" selected={mode === 'dark'} onPress={() => void onSetTheme('dark')} />
-            </View>
-
-            <Pressable onPress={onRefreshSync} style={styles.syncButton}>
-              <Text style={styles.syncButtonText}>{syncInProgress ? 'Syncing...' : 'Refresh Sync'}</Text>
-            </Pressable>
-
-            <View style={styles.menuList}>
-              {menuItems.map((item) => (
-                <Pressable key={item.label} onPress={() => onMenuPress(item)} style={styles.menuRow}>
-                  <Text style={[styles.menuText, item.danger && styles.danger]}>{item.label}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </Pressable>
-        </Pressable>
-      </RNModal>
 
       {syncMessage ? <Toast message={syncMessage} /> : null}
     </Screen>

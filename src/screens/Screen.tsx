@@ -3,14 +3,18 @@ import { KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, V
 import { spacing, ThemeColors } from '@/design/tokens';
 import { useTheme } from '@/theme/ThemeProvider';
 
+import { BottomNavBar } from '@/components/BottomNavBar';
+
 export function Screen({
   children,
   style,
-  bounces = true
+  bounces = true,
+  hideBottomBar = false
 }: {
   children: React.ReactNode;
   style?: ViewStyle;
   bounces?: boolean;
+  hideBottomBar?: boolean;
 }) {
   const { colors } = useTheme();
   const styles = createStyles(colors);
@@ -22,7 +26,11 @@ export function Screen({
           alwaysBounceVertical={bounces}
           automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
           bounces={bounces}
-          contentContainerStyle={[styles.container, style]}
+          contentContainerStyle={[
+            styles.container, 
+            style,
+            !hideBottomBar && { paddingBottom: spacing.xl * 4 }
+          ]}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -30,6 +38,7 @@ export function Screen({
           {children}
         </ScrollView>
       </KeyboardAvoidingView>
+      {!hideBottomBar && <BottomNavBar />}
     </SafeAreaView>
   );
 }

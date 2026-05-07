@@ -111,7 +111,7 @@ export const getPreferredCurrency = () => {
 
   const locale = getPreferredLocale();
   const region = extractRegion(locale);
-  cachedCurrency = (region && REGION_CURRENCY_MAP[region]) || 'USD';
+  cachedCurrency = (region && REGION_CURRENCY_MAP[region]) || 'PHP';
   return cachedCurrency;
 };
 

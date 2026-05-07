@@ -33,23 +33,19 @@ export default function SplashScreen() {
       const isAuthenticated = useAuthStore.getState().isAuthenticated;
 
       if (isAuthenticated && mpinSet) {
-        // Even if authenticated in store, we want to force MPIN unlock on app start
-        router.replace('/mpin');
-      } else if (isAuthenticated) {
-        router.replace('/dashboard');
-      } else if (mpinSet) {
-        // Has account but not authenticated this session
+        // Force MPIN unlock if account exists
         router.replace('/mpin');
       } else {
-        router.replace('/auth-choice');
+        // Entry into guest mode by default
+        router.replace('/dashboard');
       }
-    }, 900);
+    }, 1200);
 
     return () => clearTimeout(t);
-  }, [hydrated]);
+  }, [hydrated, isAuthenticated]);
 
   return (
-    <Screen style={styles.center}>
+    <Screen style={styles.center} hideBottomBar={true}>
       <Text style={styles.title}>Wize.</Text>
       <Text style={styles.subtitle}>Be Smart. Be Wize.</Text>
     </Screen>

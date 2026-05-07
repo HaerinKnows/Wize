@@ -168,7 +168,7 @@ export default function MpinScreen() {
 
   if (mode === 'loading') {
     return (
-      <Screen style={styles.center}>
+      <Screen style={styles.center} hideBottomBar={true}>
         <View style={styles.panel}>
           <Text style={styles.title}>MPIN</Text>
           <Text style={styles.caption}>Loading MPIN settings...</Text>
@@ -178,7 +178,7 @@ export default function MpinScreen() {
   }
 
   return (
-    <Screen style={styles.center}>
+    <Screen style={styles.center} hideBottomBar={true}>
       <View style={styles.panel}>
         <Text style={styles.title}>{mode === 'verify' ? 'Enter MPIN' : 'Create MPIN'}</Text>
 

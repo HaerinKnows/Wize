@@ -11,7 +11,7 @@ export default function AuthChoiceScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
-    <Screen style={styles.wrap} bounces={false}>
+    <Screen style={styles.wrap} bounces={false} hideBottomBar={true}>
       <View style={styles.panel}>
         <Text style={styles.title}>Welcome to Wize!</Text>
         <Text style={styles.subtitle}>Choose how to continue</Text>

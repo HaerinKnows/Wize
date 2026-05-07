@@ -10,8 +10,10 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { toCategoryKey, toCategoryLabel } from '@/utils/category';
 import { formatCurrency, getPreferredCurrency } from '@/utils/currency';
 
+import { Ionicons } from '@expo/vector-icons';
+
 type MetricType = 'expense' | 'income';
-type PeriodType = 'month' | 'year';
+type PeriodType = 'day' | 'week' | 'month' | 'year';
 
 type AggregatedCategory = {
   key: string;
@@ -37,13 +39,40 @@ const categoryBadgeMap: Record<string, string> = {
   emergency_fund: 'EF'
 };
 
-const majorAmountLabel = (minor: number) => (minor / 100).toFixed(2);
-const monthNameFormatter = new Intl.DateTimeFormat(undefined, { month: 'short', year: 'numeric' });
-const formatMonthLabel = (d: Date) => monthNameFormatter.format(d);
-const monthStart = (base: Date) => new Date(base.getFullYear(), base.getMonth(), 1, 0, 0, 0, 0).getTime();
-const monthEnd = (base: Date) => new Date(base.getFullYear(), base.getMonth() + 1, 1, 0, 0, 0, 0).getTime();
-const yearStart = (base: Date) => new Date(base.getFullYear(), 0, 1, 0, 0, 0, 0).getTime();
-const yearEnd = (base: Date) => new Date(base.getFullYear() + 1, 0, 1, 0, 0, 0, 0).getTime();
+const majorAmountLabel = (minor: number, currency: string) => formatCurrency(minor, currency);
+const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
+const monthFormatter = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' });
+
+const getWeekRange = (date: Date) => {
+  const start = new Date(date);
+  const day = start.getDay();
+  const diff = start.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+  start.setDate(diff);
+  start.setHours(0,0,0,0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 7);
+  return { start: start.getTime(), end: end.getTime() };
+};
+
+const getDayRange = (date: Date) => {
+  const start = new Date(date);
+  start.setHours(0,0,0,0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 1);
+  return { start: start.getTime(), end: end.getTime() };
+};
+
+const getMonthRange = (date: Date) => {
+  const start = new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0);
+  const end = new Date(date.getFullYear(), date.getMonth() + 1, 1, 0, 0, 0);
+  return { start: start.getTime(), end: end.getTime() };
+};
+
+const getYearRange = (date: Date) => {
+  const start = new Date(date.getFullYear(), 0, 1, 0, 0, 0);
+  const end = new Date(date.getFullYear() + 1, 0, 1, 0, 0, 0);
+  return { start: start.getTime(), end: end.getTime() };
+};
 
 const chartPalette = (colors: ThemeColors) => [
   colors.warning,
@@ -75,11 +104,13 @@ function SegmentPill({
 function DonutChart({
   categories,
   styles,
-  ringTrackColor
+  ringTrackColor,
+  currency
 }: {
   categories: AggregatedCategory[];
   styles: ReturnType<typeof createStyles>;
   ringTrackColor: string;
+  currency: string;
 }) {
   const radius = 74;
   const strokeWidth = 24;
@@ -115,7 +146,9 @@ function DonutChart({
         })}
       </Svg>
       <View style={styles.donutCenter}>
-        <Text style={styles.donutCenterValue}>{majorAmountLabel(totalMinor)}</Text>
+        <Text numberOfLines={1} adjustsFontSizeToFit style={styles.donutCenterValue}>
+          {majorAmountLabel(totalMinor, currency)}
+        </Text>
       </View>
     </View>
   );
@@ -126,6 +159,7 @@ export default function AnalyticsScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const allTransactions = useAppStore((s) => s.transactions);
+  const preferredCurrency = useAppStore((s) => s.preferredCurrency);
   const userId = useAuthStore((s) => s.userId);
   const transactions = useMemo(
     () => allTransactions.filter((t) => (t.ownerUserId ?? 'user_demo') === userId),
@@ -134,43 +168,48 @@ export default function AnalyticsScreen() {
 
   const [metricType, setMetricType] = useState<MetricType>('expense');
   const [periodType, setPeriodType] = useState<PeriodType>('month');
-  const [periodIndex, setPeriodIndex] = useState(3);
-  const [yearIndex, setYearIndex] = useState(3);
+  const [baseDate, setBaseDate] = useState(new Date());
 
-  const periodOptions = useMemo(() => {
-    const now = new Date();
-    const monthOptions = [3, 2, 1, 0].map((offset, idx, arr) => {
-      const date = new Date(now.getFullYear(), now.getMonth() - offset, 1);
-      const monthLabel = formatMonthLabel(date);
-      return {
-        key: `${date.getFullYear()}_${date.getMonth()}`,
-        label: idx === arr.length - 1 ? `This Month (${monthLabel})` : monthLabel,
-        date
+  const onPrev = () => {
+    const next = new Date(baseDate);
+    if (periodType === 'day') next.setDate(next.getDate() - 1);
+    else if (periodType === 'week') next.setDate(next.getDate() - 7);
+    else if (periodType === 'month') next.setMonth(next.getMonth() - 1);
+    else next.setFullYear(next.getFullYear() - 1);
+    setBaseDate(next);
+  };
+
+  const onNext = () => {
+    const next = new Date(baseDate);
+    if (periodType === 'day') next.setDate(next.getDate() + 1);
+    else if (periodType === 'week') next.setDate(next.getDate() + 7);
+    else if (periodType === 'month') next.setMonth(next.getMonth() + 1);
+    else next.setFullYear(next.getFullYear() + 1);
+    setBaseDate(next);
+  };
+
+  const { range, formattedDateRange } = useMemo(() => {
+    if (periodType === 'day') {
+      return { range: getDayRange(baseDate), formattedDateRange: dateFormatter.format(baseDate) };
+    }
+    if (periodType === 'week') {
+      const r = getWeekRange(baseDate);
+      return { 
+        range: r, 
+        formattedDateRange: `${dateFormatter.format(new Date(r.start))} - ${dateFormatter.format(new Date(r.end - 1))}` 
       };
-    });
-
-    const yearOptions = [3, 2, 1, 0].map((offset, idx, arr) => {
-      const year = now.getFullYear() - offset;
-      return {
-        key: `${year}`,
-        label: idx === arr.length - 1 ? 'This Year' : `${year}`,
-        date: new Date(year, 0, 1)
-      };
-    });
-
-    return { month: monthOptions, year: yearOptions };
-  }, []);
-
-  const selectedDate = periodType === 'month' ? periodOptions.month[periodIndex].date : periodOptions.year[yearIndex].date;
+    }
+    if (periodType === 'month') {
+      return { range: getMonthRange(baseDate), formattedDateRange: monthFormatter.format(baseDate) };
+    }
+    return { range: getYearRange(baseDate), formattedDateRange: baseDate.getFullYear().toString() };
+  }, [periodType, baseDate]);
 
   const filtered = useMemo(() => {
-    const lower = periodType === 'month' ? monthStart(selectedDate) : yearStart(selectedDate);
-    const upper = periodType === 'month' ? monthEnd(selectedDate) : yearEnd(selectedDate);
-
     return transactions.filter((t) => {
       if (t.type === 'transfer') return false;
       const ts = new Date(t.timestamp).getTime();
-      if (Number.isNaN(ts) || ts < lower || ts >= upper) return false;
+      if (Number.isNaN(ts) || ts < range.start || ts >= range.end) return false;
 
       if (metricType === 'expense') {
         return t.type === 'expense' || t.amountMinor < 0;
@@ -178,7 +217,7 @@ export default function AnalyticsScreen() {
 
       return t.type === 'income' || t.amountMinor > 0;
     });
-  }, [metricType, periodType, selectedDate, transactions]);
+  }, [metricType, range, transactions]);
 
   const categories = useMemo(() => {
     const totals = new Map<string, { label: string; amountMinor: number }>();
@@ -215,8 +254,8 @@ export default function AnalyticsScreen() {
   }, [filtered, colors]);
 
   const displayCurrency = useMemo(() => {
-    return filtered[0]?.currency ?? transactions[0]?.currency ?? getPreferredCurrency();
-  }, [filtered, transactions]);
+    return preferredCurrency || filtered[0]?.currency ?? transactions[0]?.currency ?? getPreferredCurrency();
+  }, [filtered, transactions, preferredCurrency]);
 
   const topList = categories.slice(0, 6);
 
@@ -234,33 +273,31 @@ export default function AnalyticsScreen() {
           </Pressable>
 
           <View style={styles.periodSwitch}>
+            <SegmentPill label="Day" selected={periodType === 'day'} onPress={() => setPeriodType('day')} styles={styles} />
+            <SegmentPill label="Week" selected={periodType === 'week'} onPress={() => setPeriodType('week')} styles={styles} />
             <SegmentPill label="Month" selected={periodType === 'month'} onPress={() => setPeriodType('month')} styles={styles} />
             <SegmentPill label="Year" selected={periodType === 'year'} onPress={() => setPeriodType('year')} styles={styles} />
           </View>
 
-          <View style={styles.periodRow}>
-            {(periodType === 'month' ? periodOptions.month : periodOptions.year).map((option, index) => (
-              <Pressable
-                key={option.key}
-                onPress={() => (periodType === 'month' ? setPeriodIndex(index) : setYearIndex(index))}
-                style={styles.periodLabelWrap}
-              >
-                <Text
-                  style={[
-                    styles.periodLabel,
-                    (periodType === 'month' ? periodIndex === index : yearIndex === index) && styles.periodLabelActive
-                  ]}
-                >
-                  {option.label}
-                </Text>
-              </Pressable>
-            ))}
+          <View style={styles.dateNavigator}>
+            <Pressable onPress={onPrev} style={styles.navButton}>
+              <Ionicons name="chevron-back" size={24} color={colors.primary} />
+            </Pressable>
+            <Text style={styles.dateLabel}>{formattedDateRange}</Text>
+            <Pressable onPress={onNext} style={styles.navButton}>
+              <Ionicons name="chevron-forward" size={24} color={colors.primary} />
+            </Pressable>
           </View>
 
           <View style={styles.divider} />
 
           <View style={styles.chartSection}>
-            <DonutChart categories={topList} styles={styles} ringTrackColor={colors.line} />
+            <DonutChart 
+              categories={topList} 
+              styles={styles} 
+              ringTrackColor={colors.line} 
+              currency={displayCurrency} 
+            />
             <View style={styles.legendWrap}>
               {topList.length === 0 ? <Text style={styles.emptyText}>No data for this period yet.</Text> : null}
               {topList.map((item) => (
@@ -378,6 +415,29 @@ const createStyles = (colors: ThemeColors) =>
       textAlign: 'center'
     },
     periodLabelActive: {
+      color: colors.textPrimary,
+      fontWeight: '700'
+    },
+    dateNavigator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginHorizontal: spacing.lg,
+      marginTop: spacing.md,
+      marginBottom: spacing.sm,
+      backgroundColor: colors.bg,
+      borderRadius: 12,
+      padding: spacing.xs
+    },
+    navButton: {
+      padding: spacing.sm,
+      borderRadius: 8,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.line
+    },
+    dateLabel: {
+      ...typography.body,
       color: colors.textPrimary,
       fontWeight: '700'
     },

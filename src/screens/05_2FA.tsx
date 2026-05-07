@@ -83,7 +83,7 @@ export default function TwoFactorScreen() {
   };
 
   return (
-    <Screen style={styles.center}>
+    <Screen style={styles.center} hideBottomBar={true}>
       <View style={styles.panel}>
         <Text style={styles.title}>2FA Verification</Text>
         <OTPInput value={code} onChange={setCode} />

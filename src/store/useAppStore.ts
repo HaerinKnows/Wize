@@ -80,6 +80,8 @@ type AppState = {
   clearSyncMessage: () => void;
   totals: () => { income: number; expense: number; total: number };
   byType: (type: TxType) => Transaction[];
+  preferredCurrency: string;
+  setPreferredCurrency: (currency: string) => void;
 };
 
 export const useAppStore = create<AppState>()(
@@ -94,6 +96,8 @@ export const useAppStore = create<AppState>()(
         Ovo: 'not_connected'
       },
       syncInProgress: false,
+      preferredCurrency: 'PHP',
+      setPreferredCurrency: (currency) => set({ preferredCurrency: currency }),
       addTransaction: (tx) =>
         set((state) => {
           const preferredCurrency = getPreferredCurrency();
@@ -227,7 +231,8 @@ export const useAppStore = create<AppState>()(
         transactions: state.transactions,
         budgets: state.budgets,
         integrationStatus: state.integrationStatus,
-        lastSyncAt: state.lastSyncAt
+        lastSyncAt: state.lastSyncAt,
+        preferredCurrency: state.preferredCurrency
       })
     }
   )

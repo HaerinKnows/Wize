@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Screen } from '@/screens/Screen';
 import { router } from 'expo-router';
 import Svg, { Circle } from 'react-native-svg';
 import { RoundedButton } from '@/components/RoundedButton';
@@ -260,9 +261,8 @@ export default function AnalyticsScreen() {
   const topList = categories.slice(0, 6);
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.pageTitle}>Get personalized insights</Text>
+    <Screen style={styles.container}>
+      <Text style={styles.pageTitle}>Get personalized insights</Text>
 
         <View style={styles.card}>
           <Pressable
@@ -335,8 +335,7 @@ export default function AnalyticsScreen() {
             </View>
           ))}
         </View>
-      </ScrollView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 

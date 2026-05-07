@@ -78,13 +78,10 @@ export default function AddTransactionScreen() {
   const [isOther, setIsOther] = useState(false);
   const [amount, setAmount] = useState('');
   const [notes, setNotes] = useState('');
-  const [fromAccount, setFromAccount] = useState(accounts[0]?.id ?? '');
-  const [toAccount, setToAccount] = useState(accounts[1]?.id ?? accounts[0]?.id ?? '');
+  const [fromAccount] = useState(accounts[0]?.id ?? '');
   const [error, setError] = useState('');
 
   const [categoryModal, setCategoryModal] = useState(false);
-  const [fromAccountModal, setFromAccountModal] = useState(false);
-  const [toAccountModal, setToAccountModal] = useState(false);
 
   const accountName = useMemo(() => Object.fromEntries(accounts.map((a) => [a.id, a.name])), [accounts]);
   const activeTemplates = type === 'income' ? incomeTemplates : expenseTemplates;
@@ -98,17 +95,8 @@ export default function AddTransactionScreen() {
       return;
     }
 
-    if (type === 'transfer' && fromAccount === toAccount) {
-      setError('Transfer requires different source and destination accounts.');
-      return;
-    }
-
     const minor = fromMajor(major);
-    const rawCategory =
-      type === 'transfer'
-        ? 'transfer'
-        : category.trim() || (type === 'income' ? 'income' : 'expense');
-    const categoryLabel = toCategoryLabel(rawCategory);
+    const categoryLabel = toCategoryLabel(category.trim() || (type === 'income' ? 'income' : 'expense'));
     const txCurrency = accounts.find((account) => account.id === fromAccount)?.currency ?? getPreferredCurrency();
 
     addTransaction({
@@ -118,7 +106,7 @@ export default function AddTransactionScreen() {
       category: categoryLabel,
       amountMinor: type === 'expense' ? -minor : minor,
       currency: txCurrency,
-      notes: type === 'transfer' ? `${notes} -> ${accountName[toAccount] ?? 'destination'}`.trim() : notes,
+      notes: notes,
       metadata: { source: 'manual' }
     });
 
@@ -155,48 +143,33 @@ export default function AddTransactionScreen() {
           >
             <Text style={[styles.segmentText, type === 'income' && styles.segmentTextSelected]}>Income</Text>
           </Pressable>
-          <Pressable
-            style={[styles.segmentButton, type === 'transfer' && styles.segmentButtonSelected]}
-            onPress={() => setType('transfer')}
-          >
-            <Text style={[styles.segmentText, type === 'transfer' && styles.segmentTextSelected]}>Transfer</Text>
-          </Pressable>
         </View>
 
+        {/* Account selection hidden as per request */}
+        {/*
         <Card header="Account">
           <Pressable style={styles.dropdown} onPress={() => setFromAccountModal(true)}>
             <Text style={styles.dropdownText}>{accountName[fromAccount] || 'Select Account'}</Text>
             <Text style={styles.dropdownArrow}>▼</Text>
           </Pressable>
+        </Card>
+        */}
 
-          {type === 'transfer' && (
-            <View style={styles.transferTarget}>
-              <Text style={styles.caption}>Transfer To</Text>
-              <Pressable style={styles.dropdown} onPress={() => setToAccountModal(true)}>
-                <Text style={styles.dropdownText}>{accountName[toAccount] || 'Select Account'}</Text>
-                <Text style={styles.dropdownArrow}>▼</Text>
-              </Pressable>
-            </View>
+        <Card header="Category">
+          <Pressable style={styles.dropdown} onPress={() => setCategoryModal(true)}>
+            <Text style={styles.dropdownText}>{category || (isOther ? 'Other (type below)' : 'Select Category')}</Text>
+            <Text style={styles.dropdownArrow}>▼</Text>
+          </Pressable>
+          {isOther && (
+            <Input
+              placeholder="Type custom category..."
+              value={category}
+              onChangeText={setCategory}
+              autoFocus
+              style={styles.customCategoryInput}
+            />
           )}
         </Card>
-
-        {type !== 'transfer' && (
-          <Card header="Category">
-            <Pressable style={styles.dropdown} onPress={() => setCategoryModal(true)}>
-              <Text style={styles.dropdownText}>{category || (isOther ? 'Other (type below)' : 'Select Category')}</Text>
-              <Text style={styles.dropdownArrow}>▼</Text>
-            </Pressable>
-            {isOther && (
-              <Input
-                placeholder="Type custom category..."
-                value={category}
-                onChangeText={setCategory}
-                autoFocus
-                style={styles.customCategoryInput}
-              />
-            )}
-          </Card>
-        )}
 
         <Card header="Details">
           <Input placeholder="Amount" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" />
@@ -224,37 +197,8 @@ export default function AddTransactionScreen() {
         )}
       />
 
-      <SelectionModal
-        visible={fromAccountModal}
-        title="Select Source Account"
-        data={accounts}
-        onSelect={(acc) => {
-          setFromAccount(acc.id);
-          setFromAccountModal(false);
-        }}
-        onClose={() => setFromAccountModal(false)}
-        renderItem={(acc) => (
-          <View style={styles.modalRow}>
-            <Text style={styles.modalLabel}>{acc.name}</Text>
-          </View>
-        )}
-      />
 
-      <SelectionModal
-        visible={toAccountModal}
-        title="Select Destination"
-        data={accounts}
-        onSelect={(acc) => {
-          setToAccount(acc.id);
-          setToAccountModal(false);
-        }}
-        onClose={() => setToAccountModal(false)}
-        renderItem={(acc) => (
-          <View style={styles.modalRow}>
-            <Text style={styles.modalLabel}>{acc.name}</Text>
-          </View>
-        )}
-      />
+
     </Screen>
   );
 }

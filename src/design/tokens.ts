@@ -35,12 +35,12 @@ export const lightColors: ThemeColors = {
 };
 
 export const darkColors: ThemeColors = {
-  bg: '#0B1220',
-  card: '#111A2E',
+  bg: '#050428',
+  card: '#0D103D',
   textPrimary: '#E5ECFF',
   textSecondary: '#A6B3CF',
-  primary: '#4cff88',
-  primarySoft: '#1d5224',
+  primary: '#5DA7FF',
+  primarySoft: '#1A2A4D',
   success: '#33C28A',
   warning: '#FBBF24',
   danger: '#F87171',
@@ -48,35 +48,35 @@ export const darkColors: ThemeColors = {
   chipMint: '#15322A',
   chipRose: '#3A1C27',
   chipAmber: '#3F3112',
-  line: '#26324A',
-  modalBackdrop: 'rgba(2,6,23,0.72)'
+  line: '#1E294B',
+  modalBackdrop: 'rgba(2,6,23,0.85)'
 };
 
 // Static fallback for files not yet theme-aware.
 export const colors = lightColors;
 
 export const radius = {
-  card: 10,
-  pill: 10,
-  input: 14
+  card: 12,
+  pill: 12,
+  input: 16
 };
 
 export const shadow = {
   card: {
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: 24,
     elevation: 3
   }
 };
 
 export const spacing = {
-  xs: 30,
-  sm: 10,
-  md: 16,
-  lg: 20,
-  xl: 28
+  xs: 4,
+  sm: 12,
+  md: 20,
+  lg: 24,
+  xl: 32
 };
 
 export const fontFamily = {
@@ -105,8 +105,9 @@ export const fontFamily = {
 };
 
 export const typography = {
-  h1: { fontFamily: fontFamily.bold, fontSize: 35, lineHeight: 36},
-  h2: { fontFamily: fontFamily.medium, fontSize: 22, lineHeight: 28},
-  body: { fontFamily: fontFamily.medium, fontSize: 16, lineHeight: 22},
-  caption: { fontFamily: fontFamily.medium, fontSize: 13, lineHeight: 18}
+  h1: { fontFamily: fontFamily.bold, fontSize: 40, lineHeight: 46},
+  h2: { fontFamily: fontFamily.medium, fontSize: 26, lineHeight: 32},
+  h3: { fontFamily: fontFamily.medium, fontSize: 20, lineHeight: 26},
+  body: { fontFamily: fontFamily.medium, fontSize: 18, lineHeight: 24},
+  caption: { fontFamily: fontFamily.medium, fontSize: 15, lineHeight: 20}
 };

@@ -25,7 +25,6 @@ const menuItems: MenuItem[] = [
   { label: 'Analytics', route: '/analytics' },
   { label: 'Goal Setter', route: '/goal-setter' },
   { label: 'Budgets', route: '/budgets' },
-  { label: 'Scan SMS', route: '/scan-sms' },
   { label: 'Add Transaction', route: '/add-transaction' },
   { label: 'Log Out', danger: true }
 ];

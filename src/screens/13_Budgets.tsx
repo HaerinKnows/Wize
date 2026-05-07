@@ -60,8 +60,10 @@ export default function BudgetsScreen() {
       return;
     }
 
-    if (fromMajor(parsedLimit) > walletBalanceMinor) {
-      setError(`Limit cannot exceed your wallet balance of ${(walletBalanceMinor / 100).toFixed(2)}.`);
+    const remainingBalance = useAppStore.getState().getRemainingBalance(userId);
+
+    if (fromMajor(parsedLimit) > remainingBalance) {
+      setError(`Limit cannot exceed your remaining balance of ${(remainingBalance / 100).toFixed(2)}.`);
       return;
     }
 
@@ -93,8 +95,10 @@ export default function BudgetsScreen() {
       return;
     }
 
-    if (fromMajor(parsedAmount) > walletBalanceMinor) {
-      setError(`Progress cannot exceed your wallet balance of ${(walletBalanceMinor / 100).toFixed(2)}.`);
+    const remainingBalance = useAppStore.getState().getRemainingBalance(userId);
+
+    if (fromMajor(parsedAmount) > remainingBalance) {
+      setError(`Progress cannot exceed your remaining balance of ${(remainingBalance / 100).toFixed(2)}.`);
       return;
     }
 

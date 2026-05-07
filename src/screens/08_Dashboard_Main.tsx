@@ -13,7 +13,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { radius, spacing, ThemeColors, typography } from '@/design/tokens';
 import { ThemeMode, useTheme } from '@/theme/ThemeProvider';
-import { fromMajor } from '@/utils/currency';
+import { fromMajor, formatCurrency } from '@/utils/currency';
 
 type MenuItem = {
   label: string;
@@ -59,6 +59,9 @@ export default function DashboardMainScreen() {
   const walletBalanceMinor = useAppStore((s) => s.walletBalanceMinor);
   const setWalletBalance = useAppStore((s) => s.setWalletBalance);
   const deleteTransaction = useAppStore((s) => s.deleteTransaction);
+  const getRemainingBalance = useAppStore((s) => s.getRemainingBalance);
+  
+  const remainingBalance = getRemainingBalance(userId ?? 'user_demo');
   
   const [balanceInput, setBalanceInput] = useState('');
   const [showBalanceModal, setShowBalanceModal] = useState(false);
@@ -117,6 +120,13 @@ export default function DashboardMainScreen() {
         <Text style={styles.title}>Wize</Text>
         <View style={styles.headerSpacer} />
       </View>
+
+      <Card style={{ paddingVertical: spacing.xl, alignItems: 'center' }}>
+        <Text style={styles.empty}>Remaining Balance</Text>
+        <Text style={{ ...typography.h1, color: remainingBalance >= 0 ? colors.success : colors.danger, marginTop: spacing.xs }}>
+          {formatCurrency(remainingBalance, preferredCurrency)}
+        </Text>
+      </Card>
 
       <Card
         header="Recent Transactions"

@@ -85,6 +85,7 @@ type AppState = {
   deleteTransaction: (id: string) => void;
   walletBalanceMinor: number;
   setWalletBalance: (balanceMinor: number) => void;
+  getRemainingBalance: (userId: string) => number;
 };
 
 export const useAppStore = create<AppState>()(
@@ -230,7 +231,15 @@ export const useAppStore = create<AppState>()(
           .reduce((sum, t) => sum + Math.abs(t.amountMinor), 0);
         return { income, expense, total: income - expense };
       },
-      byType: (type) => get().transactions.filter((t) => t.type === type)
+      byType: (type) => get().transactions.filter((t) => t.type === type),
+      getRemainingBalance: (ownerUserId) => {
+        const state = get();
+        const userTxs = state.transactions.filter(
+          (tx) => (tx.ownerUserId ?? 'user_demo') === ownerUserId
+        );
+        const sum = userTxs.reduce((acc, tx) => acc + tx.amountMinor, 0);
+        return state.walletBalanceMinor + sum;
+      }
     }),
     {
       name: 'wizenance-app-store',
@@ -241,7 +250,8 @@ export const useAppStore = create<AppState>()(
         budgets: state.budgets,
         integrationStatus: state.integrationStatus,
         lastSyncAt: state.lastSyncAt,
-        preferredCurrency: state.preferredCurrency
+        preferredCurrency: state.preferredCurrency,
+        walletBalanceMinor: state.walletBalanceMinor
       })
     }
   )

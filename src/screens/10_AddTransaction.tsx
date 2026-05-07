@@ -97,9 +97,11 @@ export default function AddTransactionScreen() {
     }
 
     const minor = fromMajor(major);
+    const effectiveUserId = userId ?? 'user_demo';
+    const remainingBalance = useAppStore.getState().getRemainingBalance(effectiveUserId);
 
-    if (type === 'expense' && minor > walletBalanceMinor) {
-      setError(`Amount exceeds your wallet limit of ${major > 0 ? (walletBalanceMinor / 100).toFixed(2) : '0.00'}.`);
+    if (type === 'expense' && minor > remainingBalance) {
+      setError(`Amount exceeds your remaining balance of ${remainingBalance > 0 ? (remainingBalance / 100).toFixed(2) : '0.00'}.`);
       return;
     }
 

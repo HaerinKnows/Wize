@@ -13,12 +13,17 @@
       "expo-font"
     ],
     "newArchEnabled": false,
+    "icon": "./assets/images/wizewide_1x1.png",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.wizenance.mobile"
     },
     "android": {
       "package": "com.wizenance.mobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/wizewide_1x1.png",
+        "backgroundColor": "#050428"
+      },
       "permissions": [
         "CAMERA",
         "READ_SMS",

@@ -19,6 +19,7 @@ export default function BudgetsScreen() {
   const allBudgets = useAppStore((s) => s.budgets);
   const addBudget = useAppStore((s) => s.addBudget);
   const updateBudgetSpent = useAppStore((s) => s.updateBudgetSpent);
+  const deleteBudget = useAppStore((s) => s.deleteBudget);
   const markSynced = useAppStore((s) => s.markSynced);
   const walletBalanceMinor = useAppStore((s) => s.walletBalanceMinor);
   const userId = useAuthStore((s) => s.userId ?? 'user_demo');
@@ -123,6 +124,10 @@ export default function BudgetsScreen() {
           category={budget.category}
           spent={budget.spentAmountMinor}
           limit={budget.limitAmountMinor}
+          onDelete={() => {
+            deleteBudget(budget.id);
+            if (selectedBudgetId === budget.id) setSelectedBudgetId('');
+          }}
         />
       ))}
 

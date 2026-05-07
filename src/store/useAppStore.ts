@@ -74,6 +74,7 @@ type AppState = {
   addTransaction: (tx: Omit<Transaction, 'id' | 'timestamp'>) => void;
   addBudget: (budget: Omit<Budget, 'id'>) => string;
   updateBudgetSpent: (budgetId: string, deltaMinor: number) => void;
+  deleteBudget: (id: string) => void;
   setIntegrationStatus: (provider: string, status: IntegrationState) => void;
   markSynced: () => void;
   refreshSync: (userId?: string) => Promise<SyncResult>;
@@ -138,6 +139,10 @@ export const useAppStore = create<AppState>()(
               ? { ...budget, spentAmountMinor: Math.max(0, budget.spentAmountMinor + Math.max(0, deltaMinor)) }
               : budget
           )
+        })),
+      deleteBudget: (id) =>
+        set((state) => ({
+          budgets: state.budgets.filter((b) => b.id !== id)
         })),
       setIntegrationStatus: (provider, status) =>
         set((state) => ({ integrationStatus: { ...state.integrationStatus, [provider]: status } })),

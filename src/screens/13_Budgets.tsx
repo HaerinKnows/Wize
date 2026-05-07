@@ -20,6 +20,7 @@ export default function BudgetsScreen() {
   const addBudget = useAppStore((s) => s.addBudget);
   const updateBudgetSpent = useAppStore((s) => s.updateBudgetSpent);
   const markSynced = useAppStore((s) => s.markSynced);
+  const walletBalanceMinor = useAppStore((s) => s.walletBalanceMinor);
   const userId = useAuthStore((s) => s.userId ?? 'user_demo');
 
   const [newCategory, setNewCategory] = useState('');
@@ -59,6 +60,11 @@ export default function BudgetsScreen() {
       return;
     }
 
+    if (fromMajor(parsedLimit) > walletBalanceMinor) {
+      setError(`Limit cannot exceed your wallet balance of ${(walletBalanceMinor / 100).toFixed(2)}.`);
+      return;
+    }
+
     const id = addBudget({
       ownerUserId: userId,
       category: newCategory.trim(),
@@ -84,6 +90,11 @@ export default function BudgetsScreen() {
     const parsedAmount = Number(progressAmount);
     if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
       setError('Enter a valid progress amount greater than 0.');
+      return;
+    }
+
+    if (fromMajor(parsedAmount) > walletBalanceMinor) {
+      setError(`Progress cannot exceed your wallet balance of ${(walletBalanceMinor / 100).toFixed(2)}.`);
       return;
     }
 

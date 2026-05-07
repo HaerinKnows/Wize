@@ -72,6 +72,7 @@ export default function AddTransactionScreen() {
   const addTransaction = useAppStore((s) => s.addTransaction);
   const markSynced = useAppStore((s) => s.markSynced);
   const userId = useAuthStore((s) => s.userId);
+  const walletBalanceMinor = useAppStore((s) => s.walletBalanceMinor);
 
   const [type, setType] = useState<TxType>('expense');
   const [category, setCategory] = useState('');
@@ -96,6 +97,12 @@ export default function AddTransactionScreen() {
     }
 
     const minor = fromMajor(major);
+
+    if (type === 'expense' && minor > walletBalanceMinor) {
+      setError(`Amount exceeds your wallet limit of ${major > 0 ? (walletBalanceMinor / 100).toFixed(2) : '0.00'}.`);
+      return;
+    }
+
     const categoryLabel = toCategoryLabel(category.trim() || (type === 'income' ? 'income' : 'expense'));
     const txCurrency = accounts.find((account) => account.id === fromAccount)?.currency ?? getPreferredCurrency();
 

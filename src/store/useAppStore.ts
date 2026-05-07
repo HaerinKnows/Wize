@@ -114,6 +114,12 @@ export const useAppStore = create<AppState>()(
             ]
           };
         }),
+      deleteTransaction: (id) =>
+        set((state) => ({
+          transactions: state.transactions.filter((t) => t.id !== id)
+        })),
+      walletBalanceMinor: 0,
+      setWalletBalance: (balanceMinor) => set({ walletBalanceMinor: balanceMinor }),
       addBudget: (budget) => {
         const id = `bud_${Date.now()}`;
         set((state) => ({

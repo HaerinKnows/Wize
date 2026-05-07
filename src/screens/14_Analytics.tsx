@@ -162,10 +162,10 @@ export default function AnalyticsScreen() {
   const allTransactions = useAppStore((s) => s.transactions);
   const preferredCurrency = useAppStore((s) => s.preferredCurrency);
   const userId = useAuthStore((s) => s.userId);
-  const transactions = useMemo(
-    () => allTransactions.filter((t) => (t.ownerUserId ?? 'user_demo') === userId),
-    [allTransactions, userId]
-  );
+  const transactions = useMemo(() => {
+    const effectiveUserId = userId ?? 'user_demo';
+    return allTransactions.filter((t) => (t.ownerUserId ?? 'user_demo') === effectiveUserId);
+  }, [allTransactions, userId]);
 
   const [metricType, setMetricType] = useState<MetricType>('expense');
   const [periodType, setPeriodType] = useState<PeriodType>('month');

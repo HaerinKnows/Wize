@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "Wizenance",
-    "slug": "wizenance",
-    "scheme": "wizenance",
+    "name": "Wize",
+    "slug": "wize",
+    "scheme": "wize",
     "version": "1.0.0",
     "orientation": "portrait",
     "plugins": [
@@ -16,10 +16,10 @@
     "icon": "./assets/images/wizewide_1x1.png",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.wizenance.mobile"
+      "bundleIdentifier": "com.wize.mobile"
     },
     "android": {
-      "package": "com.wizenance.mobile",
+      "package": "com.wize.mobile",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/wizewide_1x1.png",
         "backgroundColor": "#050428"

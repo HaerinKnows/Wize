@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { spacing, ThemeColors, typography } from '@/design/tokens';
 import { useTheme } from '@/theme/ThemeProvider';
 import { toCategoryLabel } from '@/utils/category';
@@ -10,13 +10,15 @@ export function TransactionRow({
   amountMinor,
   timestamp,
   currency,
-  notes
+  notes,
+  onDelete
 }: {
   category: string;
   amountMinor: number;
   timestamp: string;
   currency?: string;
   notes?: string;
+  onDelete?: () => void;
 }) {
   const { colors } = useTheme();
   const styles = createStyles(colors);
@@ -24,14 +26,21 @@ export function TransactionRow({
 
   return (
     <View style={styles.row}>
-      <View>
+      <View style={{ flex: 1 }}>
         <Text style={styles.category}>{toCategoryLabel(category)}</Text>
         {noteText ? <Text style={styles.note}>{noteText}</Text> : null}
         <Text style={styles.time}>{new Date(timestamp).toLocaleString()}</Text>
       </View>
-      <Text style={[styles.amount, amountMinor < 0 && styles.expense]}>
-        {formatCurrency(amountMinor, currency)}
-      </Text>
+      <View style={styles.rightSide}>
+        <Text style={[styles.amount, amountMinor < 0 && styles.expense]}>
+          {formatCurrency(amountMinor, currency)}
+        </Text>
+        {onDelete && (
+          <Pressable onPress={onDelete} style={styles.deleteButton}>
+            <Ionicons name="close-circle" size={20} color={colors.danger} />
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 }
@@ -51,5 +60,13 @@ const createStyles = (colors: ThemeColors) =>
     note: { ...typography.caption, color: colors.textPrimary, opacity: 0.9 },
     time: { ...typography.caption, color: colors.textSecondary },
     amount: { ...typography.body, color: colors.success },
-    expense: { color: colors.danger }
+    expense: { color: colors.danger },
+    rightSide: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm
+    },
+    deleteButton: {
+      padding: spacing.xs
+    }
   });

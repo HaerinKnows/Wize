@@ -82,6 +82,9 @@ type AppState = {
   byType: (type: TxType) => Transaction[];
   preferredCurrency: string;
   setPreferredCurrency: (currency: string) => void;
+  deleteTransaction: (id: string) => void;
+  walletBalanceMinor: number;
+  setWalletBalance: (balanceMinor: number) => void;
 };
 
 export const useAppStore = create<AppState>()(

@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal as RNModal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal as RNModal, Pressable, StyleSheet, Text, View, Modal, TextInput } from 'react-native';
 import { router } from 'expo-router';
 import { Card } from '@/components/Card';
 import { Chip } from '@/components/Chip';
+import { Input } from '@/components/Input';
+import { RoundedButton } from '@/components/RoundedButton';
 import { FloatingActionButton } from '@/components/FloatingActionButton';
 import { Toast } from '@/components/Toast';
 import { TransactionRow } from '@/components/TransactionRow';
@@ -11,6 +13,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { radius, spacing, ThemeColors, typography } from '@/design/tokens';
 import { ThemeMode, useTheme } from '@/theme/ThemeProvider';
+import { fromMajor } from '@/utils/currency';
 
 type MenuItem = {
   label: string;
@@ -53,6 +56,27 @@ export default function DashboardMainScreen() {
   const userId = useAuthStore((s) => s.userId);
   const preferredCurrency = useAppStore((s) => s.preferredCurrency);
 
+  const walletBalanceMinor = useAppStore((s) => s.walletBalanceMinor);
+  const setWalletBalance = useAppStore((s) => s.setWalletBalance);
+  const deleteTransaction = useAppStore((s) => s.deleteTransaction);
+  
+  const [balanceInput, setBalanceInput] = useState('');
+  const [showBalanceModal, setShowBalanceModal] = useState(false);
+
+  useEffect(() => {
+    if (walletBalanceMinor === 0) {
+      setShowBalanceModal(true);
+    }
+  }, [walletBalanceMinor]);
+
+  const handleSetBalance = () => {
+    const val = parseFloat(balanceInput);
+    if (!isNaN(val) && val >= 0) {
+      setWalletBalance(fromMajor(val));
+      setShowBalanceModal(false);
+    }
+  };
+
   const recentTransactions = useMemo(() => {
     const effectiveUserId = userId ?? 'user_demo';
     return allTransactions.filter((t) => (t.ownerUserId ?? 'user_demo') === effectiveUserId).slice(0, 6);
@@ -90,7 +114,7 @@ export default function DashboardMainScreen() {
     <Screen>
       <View style={styles.header}>
         <View style={styles.headerSpacer} />
-        <Text style={styles.title}>Wizenance</Text>
+        <Text style={styles.title}>Wize</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -116,6 +140,7 @@ export default function DashboardMainScreen() {
             timestamp={txn.timestamp}
             currency={txn.currency || preferredCurrency}
             notes={txn.notes}
+            onDelete={() => deleteTransaction(txn.id)}
           />
         ))}
       </Card>
@@ -133,6 +158,22 @@ export default function DashboardMainScreen() {
       </Pressable>
 
       {syncMessage ? <Toast message={syncMessage} /> : null}
+
+      <Modal visible={showBalanceModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <Card style={styles.balanceCard} header="Setup Wallet Balance">
+            <Text style={styles.balanceLabel}>How much is your current wallet balance? This will be your daily tracking limit.</Text>
+            <Input 
+              placeholder="e.g. 5000" 
+              value={balanceInput} 
+              onChangeText={setBalanceInput} 
+              keyboardType="decimal-pad" 
+            />
+            <View style={{ height: spacing.md }} />
+            <RoundedButton label="Set Initial Balance" onPress={handleSetBalance} />
+          </Card>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -178,7 +219,24 @@ const createStyles = (colors: ThemeColors) =>
     },
     sync: {
       ...typography.caption,
-      color: colors.textSecondary
+      color: colors.textSecondary,
+      textAlign: 'center',
+      marginTop: spacing.md,
+      marginBottom: spacing.xl
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.85)',
+      justifyContent: 'center',
+      padding: spacing.lg
+    },
+    balanceCard: {
+      backgroundColor: colors.card
+    },
+    balanceLabel: {
+      ...typography.body,
+      color: colors.textSecondary,
+      marginBottom: spacing.md
     },
     backdrop: {
       flex: 1,

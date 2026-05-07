@@ -142,8 +142,6 @@ export default function BudgetsScreen() {
       </Card>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
-
-      <RoundedButton label="Back" variant="secondary" onPress={() => router.back()} />
     </Screen>
   );
 }

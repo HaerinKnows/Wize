@@ -68,10 +68,10 @@ const createStyles = (colors: ThemeColors) =>
     bar: {
       flexDirection: 'row',
       backgroundColor: colors.card,
-      height: Platform.OS === 'ios' ? 85 : 70,
+      height: Platform.OS === 'ios' ? 85 : 80,
       borderTopWidth: 1,
       borderTopColor: colors.line,
-      paddingBottom: Platform.OS === 'ios' ? 20 : 0,
+      paddingBottom: Platform.OS === 'ios' ? 20 : 10,
       alignItems: 'center',
       justifyContent: 'space-around',
       borderTopLeftRadius: 24,

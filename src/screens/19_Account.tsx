@@ -50,14 +50,14 @@ export default function AccountScreen() {
         </Card>
 
         <View style={styles.menuList}>
-           <MenuItem icon="settings-outline" label="Settings" onPress={() => {}} colors={colors} />
+           <MenuItem icon="settings-outline" label="Settings" onPress={() => alert('Settings coming soon!')} colors={colors} />
            <MenuItem 
              icon="cash-outline" 
              label={`Currency (${preferredCurrency})`} 
              onPress={toggleCurrency} 
              colors={colors} 
            />
-           <MenuItem icon="help-circle-outline" label="Help & Support" onPress={() => {}} colors={colors} />
+           <MenuItem icon="help-circle-outline" label="Help & Support" onPress={() => alert('Support available at support@wize.com')} colors={colors} />
         </View>
       </Screen>
     );
@@ -89,13 +89,13 @@ export default function AccountScreen() {
 
       <View style={styles.menuList}>
         <Text style={styles.sectionTitle}>Account Settings</Text>
-        <MenuItem icon="person-outline" label="Edit Profile" onPress={() => {}} colors={colors} />
-        <MenuItem icon="notifications-outline" label="Notifications" onPress={() => {}} colors={colors} />
+        <MenuItem icon="person-outline" label="Edit Profile" onPress={() => alert('Profile editing coming soon!')} colors={colors} />
+        <MenuItem icon="notifications-outline" label="Notifications" onPress={() => alert('Notification settings coming soon!')} colors={colors} />
         <MenuItem icon="shield-checkmark-outline" label="Security & MPIN" onPress={() => router.push('/mpin')} colors={colors} />
         
         <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>App Settings</Text>
-        <MenuItem icon="color-palette-outline" label="Appearance" onPress={() => {}} colors={colors} />
-        <MenuItem icon="language-outline" label="Language" onPress={() => {}} colors={colors} />
+        <MenuItem icon="color-palette-outline" label="Appearance" onPress={() => alert('Appearance settings coming soon!')} colors={colors} />
+        <MenuItem icon="language-outline" label="Language" onPress={() => alert('Language settings coming soon!')} colors={colors} />
         <MenuItem 
           icon="cash-outline" 
           label={`Currency (${preferredCurrency})`} 

@@ -54,7 +54,8 @@ export default function DashboardMainScreen() {
   const preferredCurrency = useAppStore((s) => s.preferredCurrency);
 
   const recentTransactions = useMemo(() => {
-    return allTransactions.filter((t) => (t.ownerUserId ?? 'user_demo') === userId).slice(0, 6);
+    const effectiveUserId = userId ?? 'user_demo';
+    return allTransactions.filter((t) => (t.ownerUserId ?? 'user_demo') === effectiveUserId).slice(0, 6);
   }, [allTransactions, userId]);
 
   const onMenuPress = (item: MenuItem) => {

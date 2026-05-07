@@ -335,8 +335,6 @@ export default function AnalyticsScreen() {
             </View>
           ))}
         </View>
-
-        <RoundedButton label="Back" variant="secondary" onPress={() => router.back()} />
       </ScrollView>
     </SafeAreaView>
   );

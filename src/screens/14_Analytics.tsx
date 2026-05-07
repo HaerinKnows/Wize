@@ -254,7 +254,7 @@ export default function AnalyticsScreen() {
   }, [filtered, colors]);
 
   const displayCurrency = useMemo(() => {
-    return preferredCurrency || filtered[0]?.currency ?? transactions[0]?.currency ?? getPreferredCurrency();
+    return (preferredCurrency || filtered[0]?.currency) ?? transactions[0]?.currency ?? getPreferredCurrency();
   }, [filtered, transactions, preferredCurrency]);
 
   const topList = categories.slice(0, 6);

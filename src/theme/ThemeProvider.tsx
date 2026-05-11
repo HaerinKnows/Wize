@@ -1,10 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
-import { darkColors, lightColors, ThemeColors } from '@/design/tokens';
+import { darkColors, lightColors, goldColors, midnightColors, glassColors, ThemeColors } from '@/design/tokens';
 
-export type ThemeMode = 'system' | 'light' | 'dark';
-type ResolvedTheme = 'light' | 'dark';
+export type ThemeMode = 'system' | 'light' | 'dark' | 'gold' | 'midnight' | 'glassmorphism';
+type ResolvedTheme = 'light' | 'dark' | 'gold' | 'midnight' | 'glassmorphism';
 
 type ThemeContextValue = {
   mode: ThemeMode;
@@ -23,6 +23,9 @@ const toResolvedTheme = (
 ): ResolvedTheme => {
   if (mode === 'light') return 'light';
   if (mode === 'dark') return 'dark';
+  if (mode === 'gold') return 'gold';
+  if (mode === 'midnight') return 'midnight';
+  if (mode === 'glassmorphism') return 'glassmorphism';
   return systemScheme === 'dark' ? 'dark' : 'light';
 };
 
@@ -37,8 +40,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       try {
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         if (!active || !raw) return;
-        if (raw === 'light' || raw === 'dark' || raw === 'system') {
-          setModeState(raw);
+        if (['light', 'dark', 'system', 'gold', 'midnight', 'glassmorphism'].includes(raw)) {
+          setModeState(raw as ThemeMode);
         }
       } catch {
         // Keep default system mode when storage is unavailable.
@@ -53,7 +56,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const resolvedTheme = toResolvedTheme(mode, systemScheme);
-  const colors = resolvedTheme === 'dark' ? darkColors : lightColors;
+  const colors = useMemo(() => {
+    switch (resolvedTheme) {
+      case 'dark': return darkColors;
+      case 'gold': return goldColors;
+      case 'midnight': return midnightColors;
+      case 'glassmorphism': return glassColors;
+      default: return lightColors;
+    }
+  }, [resolvedTheme]);
 
   const setMode = async (nextMode: ThemeMode) => {
     setModeState(nextMode);

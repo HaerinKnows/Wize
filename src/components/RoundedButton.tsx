@@ -1,5 +1,4 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, ViewStyle } from 'react-native';
 import { radius, spacing, ThemeColors, typography } from '@/design/tokens';
 import { useTheme } from '@/theme/ThemeProvider';
 
@@ -9,12 +8,14 @@ export function RoundedButton({
   label,
   onPress,
   variant = 'primary',
-  accessibilityLabel
+  accessibilityLabel,
+  style
 }: {
   label: string;
   onPress?: () => void;
   variant?: Variant;
   accessibilityLabel?: string;
+  style?: ViewStyle;
 }) {
   const { colors } = useTheme();
   const styles = createStyles(colors);
@@ -25,7 +26,7 @@ export function RoundedButton({
       accessibilityLabel={accessibilityLabel ?? label}
       disabled={variant === 'disabled'}
       onPress={onPress}
-      style={[styles.base, variant === 'secondary' && styles.secondary, variant === 'disabled' && styles.disabled]}
+      style={[styles.base, variant === 'secondary' && styles.secondary, variant === 'disabled' && styles.disabled, style]}
     >
       <Text style={[styles.text, variant === 'secondary' && styles.secondaryText]}>{label}</Text>
     </Pressable>

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { RoundedButton } from '@/components/RoundedButton';
 import { Screen } from '@/screens/Screen';
@@ -7,6 +8,7 @@ import { radius, spacing, ThemeColors, typography } from '@/design/tokens';
 import { useTheme } from '@/theme/ThemeProvider';
 import { chat, ChatMessage } from '@/services/aiService';
 import { useAppStore } from '@/store/useAppStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { getPreferredCurrency } from '@/utils/currency';
 
 export default function AIChatScreen() {
@@ -15,13 +17,30 @@ export default function AIChatScreen() {
   const accounts = useAppStore((state) => state.accounts);
   const transactions = useAppStore((state) => state.transactions);
   const budgets = useAppStore((state) => state.budgets);
+  const isPremium = useAuthStore((state) => state.isPremium);
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'assistant', content: "Hello! I'm Wize, your AI finance coach. How can I help you with your money today?" }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isVoiceActive, setIsVoiceActive] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+
+  const startVoice = () => {
+    if (!isPremium) {
+      alert("Upgrade to Wize Premium to use Voice Finance!");
+      router.push('/account');
+      return;
+    }
+    setIsVoiceActive(true);
+    // Simulate voice detection
+    setTimeout(() => {
+      const demoCmd = "I just spent $50 on groceries";
+      setInput(demoCmd);
+      setIsVoiceActive(false);
+    }, 1500);
+  };
 
   const onSend = useCallback(async () => {
     if (!input.trim() || loading) return;
@@ -55,7 +74,7 @@ export default function AIChatScreen() {
   }, [messages]);
 
   return (
-    <Screen style={styles.container}>
+    <Screen style={styles.container} isScrollable={false} hideBottomBar>
       <View style={styles.header}>
         <Text style={styles.title}>Wize AI Chat</Text>
         <Text style={styles.subtitle}>Your Personal Finance Coach</Text>
@@ -66,6 +85,7 @@ export default function AIChatScreen() {
         data={messages}
         keyExtractor={(_, index) => index.toString()}
         contentContainerStyle={styles.messageList}
+        style={styles.flatList}
         renderItem={({ item }) => (
           <View style={[styles.messageBubble, item.role === 'user' ? styles.userBubble : styles.assistantBubble]}>
             <Text style={[styles.messageText, item.role === 'user' ? styles.userText : styles.assistantText]}>
@@ -75,25 +95,33 @@ export default function AIChatScreen() {
         )}
       />
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={100}>
-        <View style={styles.inputArea}>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Ask Wize anything..."
-            placeholderTextColor={colors.textSecondary}
-            value={input}
-            onChangeText={setInput}
-            multiline
+      <View style={styles.inputArea}>
+        <Pressable 
+          style={[styles.voiceButton, isVoiceActive && styles.voiceButtonActive]} 
+          onPress={startVoice}
+        >
+          <Ionicons 
+            name={isVoiceActive ? "mic" : "mic-outline"} 
+            size={22} 
+            color={isVoiceActive ? colors.primary : (isPremium ? colors.textPrimary : colors.textSecondary)} 
           />
-          <View style={styles.sendButtonWrap}>
-            {loading ? (
-              <ActivityIndicator color={colors.primary} />
-            ) : (
-              <RoundedButton label="Send" onPress={onSend} variant={input.trim() ? 'primary' : 'disabled'} />
-            )}
-          </View>
+        </Pressable>
+        <TextInput
+          style={styles.textInput}
+          placeholder={isVoiceActive ? "Listening..." : "Ask Wize anything..."}
+          placeholderTextColor={colors.textSecondary}
+          value={input}
+          onChangeText={setInput}
+          multiline
+        />
+        <View style={styles.sendButtonWrap}>
+          {loading ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : (
+            <RoundedButton label="Send" onPress={onSend} variant={input.trim() ? 'primary' : 'disabled'} />
+          )}
         </View>
-      </KeyboardAvoidingView>
+      </View>
 
       <RoundedButton label="Back" variant="secondary" onPress={() => router.back()} style={styles.backButton} />
     </Screen>
@@ -104,7 +132,9 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      paddingBottom: spacing.lg
+    },
+    flatList: {
+      flex: 1,
     },
     header: {
       marginBottom: spacing.md
@@ -154,6 +184,17 @@ const createStyles = (colors: ThemeColors) =>
     },
     sendButtonWrap: {
       minWidth: 80
+    },
+    voiceButton: {
+      padding: spacing.xs,
+      borderRadius: 20,
+      backgroundColor: colors.bg,
+      marginRight: spacing.xs,
+    },
+    voiceButtonActive: {
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primary,
+      borderWidth: 1,
     },
     backButton: {
       marginTop: spacing.sm

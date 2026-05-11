@@ -9,8 +9,10 @@ type AuthState = {
   pendingUserId?: string;
   twoFactorVerified: boolean;
   mpinSet: boolean;
+  isPremium: boolean;
   biometricEnabled: boolean;
   biometricByUser: Record<string, boolean>;
+  setPremium: (enabled: boolean) => void;
   startAuth: (userId: string, isSignup: boolean) => void;
   verify2fa: () => void;
   completeAuth: () => void;
@@ -26,8 +28,10 @@ export const useAuthStore = create<AuthState>()(
       isSignup: false,
       twoFactorVerified: false,
       mpinSet: false,
+      isPremium: false,
       biometricEnabled: false,
       biometricByUser: {},
+      setPremium: (enabled) => set({ isPremium: enabled }),
       startAuth: (userId, isSignup) =>
         set((state) => ({
           pendingUserId: userId,
@@ -77,7 +81,8 @@ export const useAuthStore = create<AuthState>()(
         userId: state.userId,
         mpinSet: state.mpinSet,
         biometricEnabled: state.biometricEnabled,
-        biometricByUser: state.biometricByUser
+        biometricByUser: state.biometricByUser,
+        isPremium: state.isPremium
       })
     }
   )

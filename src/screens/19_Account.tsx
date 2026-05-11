@@ -12,11 +12,15 @@ import { useAppStore } from '@/store/useAppStore';
 export default function AccountScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { isAuthenticated, logout, userId } = useAuthStore();
+  const { isAuthenticated, logout, userId, isPremium, setPremium } = useAuthStore();
   const { preferredCurrency, setPreferredCurrency } = useAppStore();
 
   const toggleCurrency = () => {
     setPreferredCurrency(preferredCurrency === 'PHP' ? 'USD' : 'PHP');
+  };
+
+  const togglePremium = () => {
+    setPremium(!isPremium);
   };
 
   const handleLogout = () => {
@@ -73,17 +77,26 @@ export default function AccountScreen() {
         </View>
         <View style={styles.profileInfo}>
           <Text style={styles.userName}>{userId || 'User'}</Text>
-          <Text style={styles.userStatus}>Premium Member</Text>
+          <Text style={isPremium ? styles.userStatusPremium : styles.userStatusStandard}>
+            {isPremium ? 'Premium Member' : 'Standard Member'}
+          </Text>
         </View>
       </View>
 
-      <Card style={styles.premiumCard}>
+      <Card style={[styles.premiumCard, !isPremium && styles.standardCard]}>
         <View style={styles.premiumRow}>
-          <Ionicons name="star" size={24} color="#FFD700" />
-          <View>
-            <Text style={styles.premiumTitle}>Wize Premium</Text>
-            <Text style={styles.premiumSubtitle}>Unlocked all features</Text>
+          <Ionicons name="star" size={24} color={isPremium ? "#FFD700" : colors.textSecondary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.premiumTitle}>{isPremium ? 'Wize Premium' : 'Upgrade to Pro'}</Text>
+            <Text style={styles.premiumSubtitle}>
+              {isPremium ? 'Unlocked all features' : 'Get AI insights & Voice finance'}
+            </Text>
           </View>
+          {!isPremium && (
+            <Pressable style={styles.upgradeButton} onPress={togglePremium}>
+              <Text style={styles.upgradeButtonText}>Upgrade</Text>
+            </Pressable>
+          )}
         </View>
       </Card>
 
@@ -94,7 +107,8 @@ export default function AccountScreen() {
         <MenuItem icon="shield-checkmark-outline" label="Security & MPIN" onPress={() => router.push('/mpin')} colors={colors} />
         
         <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>App Settings</Text>
-        <MenuItem icon="color-palette-outline" label="Appearance" onPress={() => alert('Appearance settings coming soon!')} colors={colors} />
+        <MenuItem icon="color-palette-outline" label="Appearance" onPress={() => router.push('/appearance')} colors={colors} />
+        <MenuItem icon="lock-closed-outline" label="Privacy & Vault" onPress={() => router.push('/privacy')} colors={colors} />
         <MenuItem icon="language-outline" label="Language" onPress={() => alert('Language settings coming soon!')} colors={colors} />
         <MenuItem 
           icon="cash-outline" 
@@ -102,6 +116,18 @@ export default function AccountScreen() {
           onPress={toggleCurrency} 
           colors={colors} 
         />
+        
+        {isPremium && (
+          <>
+            <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>Premium Perks</Text>
+            <MenuItem 
+              icon="headset-outline" 
+              label="Priority Support" 
+              onPress={() => alert('Connecting to Wize Priority Support...')} 
+              colors={colors} 
+            />
+          </>
+        )}
         
         <Pressable style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color={colors.danger} />
@@ -247,9 +273,29 @@ const createStyles = (colors: ThemeColors) =>
       ...typography.h2,
       color: colors.textPrimary,
     },
-    userStatus: {
+    userStatusPremium: {
       ...typography.caption,
       color: colors.primary,
+      fontWeight: '700',
+    },
+    userStatusStandard: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      fontWeight: '600',
+    },
+    standardCard: {
+      backgroundColor: colors.card,
+      borderColor: colors.line,
+    },
+    upgradeButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: 20,
+    },
+    upgradeButtonText: {
+      ...typography.caption,
+      color: '#FFFFFF',
       fontWeight: '700',
     },
     premiumCard: {

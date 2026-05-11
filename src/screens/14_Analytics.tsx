@@ -12,6 +12,8 @@ import { toCategoryKey, toCategoryLabel } from '@/utils/category';
 import { formatCurrency, getPreferredCurrency } from '@/utils/currency';
 
 import { Ionicons } from '@expo/vector-icons';
+import { getInsights, Insight } from '@/services/aiService';
+import { useEffect } from 'react';
 
 type MetricType = 'expense' | 'income';
 type PeriodType = 'day' | 'week' | 'month' | 'year';
@@ -159,9 +161,9 @@ export default function AnalyticsScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const allTransactions = useAppStore((s) => s.transactions);
-  const preferredCurrency = useAppStore((s) => s.preferredCurrency);
-  const userId = useAuthStore((s) => s.userId);
+  const allTransactions = useAppStore((state) => state.transactions);
+  const preferredCurrency = useAppStore((state) => state.preferredCurrency);
+  const userId = useAuthStore((state) => state.userId);
   const transactions = useMemo(() => {
     const effectiveUserId = userId ?? 'user_demo';
     return allTransactions.filter((t) => (t.ownerUserId ?? 'user_demo') === effectiveUserId);
@@ -170,6 +172,34 @@ export default function AnalyticsScreen() {
   const [metricType, setMetricType] = useState<MetricType>('expense');
   const [periodType, setPeriodType] = useState<PeriodType>('month');
   const [baseDate, setBaseDate] = useState(new Date());
+  const [insights, setInsights] = useState<Insight[]>([]);
+  const [loadingInsights, setLoadingInsights] = useState(false);
+
+  const isPremium = useAuthStore((state) => state.isPremium);
+  const accounts = useAppStore((state) => state.accounts);
+  const budgets = useAppStore((state) => state.budgets);
+
+  useEffect(() => {
+    if (isPremium) {
+      const fetchInsights = async () => {
+        setLoadingInsights(true);
+        try {
+          const res = await getInsights({
+            accounts,
+            transactions,
+            budgets,
+            currency: preferredCurrency || getPreferredCurrency()
+          });
+          setInsights(res.insights);
+        } catch (err) {
+          console.error('Failed to fetch insights:', err);
+        } finally {
+          setLoadingInsights(false);
+        }
+      };
+      fetchInsights();
+    }
+  }, [isPremium, accounts, transactions, budgets, preferredCurrency]);
 
   const onPrev = () => {
     const next = new Date(baseDate);
@@ -335,6 +365,49 @@ export default function AnalyticsScreen() {
             </View>
           ))}
         </View>
+
+        <View style={styles.insightsHeader}>
+          <Text style={styles.insightsTitle}>Predictive Insights</Text>
+          <View style={styles.premiumBadge}>
+            <Text style={styles.premiumBadgeText}>PREMIUM</Text>
+          </View>
+        </View>
+
+        {!isPremium ? (
+          <Pressable style={styles.upgradeCard} onPress={() => router.push('/account')}>
+            <View style={styles.upgradeContent}>
+              <Ionicons name="sparkles" size={24} color="#FFD700" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.upgradeTitle}>Unlock AI Coaching</Text>
+                <Text style={styles.upgradeSubtitle}>Get proactive alerts and goal optimization</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </View>
+          </Pressable>
+        ) : (
+          <View style={styles.insightsList}>
+            {loadingInsights && <Text style={styles.loadingText}>Analyzing your spending patterns...</Text>}
+            {!loadingInsights && insights.length === 0 && (
+              <Text style={styles.emptyText}>No insights available for this period yet.</Text>
+            )}
+            {insights.map((insight, idx) => (
+              <View key={`insight_${idx}`} style={[styles.insightCard, insight.type === 'alert' ? styles.insightAlert : styles.insightOptimization]}>
+                <View style={styles.insightIconWrap}>
+                  <Ionicons 
+                    name={insight.type === 'alert' ? 'warning-outline' : 'trending-up-outline'} 
+                    size={20} 
+                    color={insight.type === 'alert' ? colors.danger : colors.success} 
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.insightCardTitle}>{insight.title}</Text>
+                  <Text style={styles.insightCardDetail}>{insight.detail}</Text>
+                  {insight.impact && <Text style={styles.insightCardImpact}>{insight.impact}</Text>}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
     </Screen>
   );
 }
@@ -562,5 +635,97 @@ const createStyles = (colors: ThemeColors) =>
     emptyText: {
       ...typography.caption,
       color: colors.textSecondary
+    },
+    insightsHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginTop: spacing.md
+    },
+    insightsTitle: {
+      ...typography.h2,
+      color: colors.textPrimary
+    },
+    premiumBadge: {
+      backgroundColor: '#FFD700',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4
+    },
+    premiumBadgeText: {
+      fontSize: 10,
+      fontWeight: '900',
+      color: '#000000'
+    },
+    upgradeCard: {
+      backgroundColor: colors.card,
+      borderRadius: 20,
+      padding: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.line,
+      borderStyle: 'dashed'
+    },
+    upgradeContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md
+    },
+    upgradeTitle: {
+      ...typography.body,
+      color: colors.textPrimary,
+      fontWeight: '700'
+    },
+    upgradeSubtitle: {
+      ...typography.caption,
+      color: colors.textSecondary
+    },
+    insightsList: {
+      gap: spacing.sm
+    },
+    loadingText: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      fontStyle: 'italic'
+    },
+    insightCard: {
+      flexDirection: 'row',
+      gap: spacing.md,
+      padding: spacing.md,
+      borderRadius: 16,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.line
+    },
+    insightAlert: {
+      borderLeftWidth: 4,
+      borderLeftColor: colors.danger
+    },
+    insightOptimization: {
+      borderLeftWidth: 4,
+      borderLeftColor: colors.success
+    },
+    insightIconWrap: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: colors.bg,
+      alignItems: 'center',
+      justifyContent: 'center'
+    },
+    insightCardTitle: {
+      ...typography.body,
+      color: colors.textPrimary,
+      fontWeight: '700'
+    },
+    insightCardDetail: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      marginTop: 2
+    },
+    insightCardImpact: {
+      ...typography.caption,
+      color: colors.success,
+      fontWeight: '700',
+      marginTop: 4
     }
   });

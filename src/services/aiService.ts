@@ -82,6 +82,25 @@ type ChatResponse = {
   model?: string;
 };
 
+export type Insight = {
+  type: 'alert' | 'optimization';
+  title: string;
+  detail: string;
+  impact?: string;
+};
+
+export async function getInsights(input: {
+  accounts: Account[];
+  transactions: Transaction[];
+  budgets: Budget[];
+  currency: string;
+}) {
+  return apiRequest<{ insights: Insight[] }>('/ai/insights', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  });
+}
+
 export async function chat(
   history: ChatMessage[],
   snapshot: {

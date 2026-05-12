@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { RoundedButton } from '@/components/RoundedButton';
 import { Screen } from '@/screens/Screen';
-import { radius, spacing, ThemeColors, typography } from '@/design/tokens';
+import { spacing, ThemeColors, typography } from '@/design/tokens';
 import { useTheme } from '@/theme/ThemeProvider';
 import { chat, ChatMessage } from '@/services/aiService';
 import { useAppStore } from '@/store/useAppStore';
@@ -30,7 +30,7 @@ export default function AIChatScreen() {
   const startVoice = () => {
     if (!isPremium) {
       alert("Upgrade to Wize Premium to use Voice Finance!");
-      router.push('/account');
+      router.push('/premium');
       return;
     }
     setIsVoiceActive(true);

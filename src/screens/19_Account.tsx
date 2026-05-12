@@ -5,22 +5,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/components/Card';
 import { Screen } from '@/screens/Screen';
 import { useAuthStore } from '@/store/useAuthStore';
-import { spacing, radius, ThemeColors, typography } from '@/design/tokens';
+import { spacing, ThemeColors, typography } from '@/design/tokens';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useAppStore } from '@/store/useAppStore';
 
 export default function AccountScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { isAuthenticated, logout, userId, isPremium, setPremium } = useAuthStore();
-  const { preferredCurrency, setPreferredCurrency } = useAppStore();
+  const { isAuthenticated, logout, userId, isPremium } = useAuthStore();
+  const { preferredCurrency, setPreferredCurrency, userProfile, sharedAccounts } = useAppStore();
+  const displayName = userProfile.displayName.trim() || userId || 'User';
 
   const toggleCurrency = () => {
     setPreferredCurrency(preferredCurrency === 'PHP' ? 'USD' : 'PHP');
-  };
-
-  const togglePremium = () => {
-    setPremium(!isPremium);
   };
 
   const handleLogout = () => {
@@ -76,14 +73,15 @@ export default function AccountScreen() {
            </View>
         </View>
         <View style={styles.profileInfo}>
-          <Text style={styles.userName}>{userId || 'User'}</Text>
+          <Text style={styles.userName}>{displayName}</Text>
           <Text style={isPremium ? styles.userStatusPremium : styles.userStatusStandard}>
             {isPremium ? 'Premium Member' : 'Standard Member'}
           </Text>
         </View>
       </View>
 
-      <Card style={[styles.premiumCard, !isPremium && styles.standardCard]}>
+      <Pressable onPress={() => router.push('/premium')}>
+        <Card style={[styles.premiumCard, !isPremium && styles.standardCard]}>
         <View style={styles.premiumRow}>
           <Ionicons name="star" size={24} color={isPremium ? "#FFD700" : colors.textSecondary} />
           <View style={{ flex: 1 }}>
@@ -93,18 +91,25 @@ export default function AccountScreen() {
             </Text>
           </View>
           {!isPremium && (
-            <Pressable style={styles.upgradeButton} onPress={togglePremium}>
+            <View style={styles.upgradeButton}>
               <Text style={styles.upgradeButtonText}>Upgrade</Text>
-            </Pressable>
+            </View>
           )}
         </View>
-      </Card>
+        </Card>
+      </Pressable>
 
       <View style={styles.menuList}>
         <Text style={styles.sectionTitle}>Account Settings</Text>
-        <MenuItem icon="person-outline" label="Edit Profile" onPress={() => alert('Profile editing coming soon!')} colors={colors} />
-        <MenuItem icon="notifications-outline" label="Notifications" onPress={() => alert('Notification settings coming soon!')} colors={colors} />
-        <MenuItem icon="shield-checkmark-outline" label="Security & MPIN" onPress={() => router.push('/mpin')} colors={colors} />
+        <MenuItem icon="person-outline" label="Edit Profile" onPress={() => router.push('/profile')} colors={colors} />
+        <MenuItem icon="notifications-outline" label="Notifications" onPress={() => router.push('/notifications')} colors={colors} />
+        <MenuItem icon="shield-checkmark-outline" label="Security & MPIN" onPress={() => router.push('/security')} colors={colors} />
+        <MenuItem
+          icon="people-outline"
+          label={sharedAccounts.length ? `Shared Accounts (${sharedAccounts.length})` : 'Joint / Shared Account'}
+          onPress={() => router.push('/shared-account')}
+          colors={colors}
+        />
         
         <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>App Settings</Text>
         <MenuItem icon="color-palette-outline" label="Appearance" onPress={() => router.push('/appearance')} colors={colors} />
@@ -116,18 +121,6 @@ export default function AccountScreen() {
           onPress={toggleCurrency} 
           colors={colors} 
         />
-        
-        {isPremium && (
-          <>
-            <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>Premium Perks</Text>
-            <MenuItem 
-              icon="headset-outline" 
-              label="Priority Support" 
-              onPress={() => alert('Connecting to Wize Priority Support...')} 
-              colors={colors} 
-            />
-          </>
-        )}
         
         <Pressable style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color={colors.danger} />
@@ -173,7 +166,8 @@ const stylesItem = (colors: ThemeColors) => StyleSheet.create({
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
-      flex: 1,
+      flexGrow: 1,
+      paddingBottom: spacing.xl * 6,
     },
     guestHeader: {
       alignItems: 'center',

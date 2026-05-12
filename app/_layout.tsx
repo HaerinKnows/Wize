@@ -51,6 +51,13 @@ function RootStack() {
         <Stack.Screen name="achievements" />
         <Stack.Screen name="goal-setter" />
         <Stack.Screen name="smart-tips" />
+        <Stack.Screen name="security" />
+        <Stack.Screen name="appearance" />
+        <Stack.Screen name="privacy" />
+        <Stack.Screen name="profile" />
+        <Stack.Screen name="notifications" />
+        <Stack.Screen name="shared-account" />
+        <Stack.Screen name="premium" />
       </Stack>
     </>
   );

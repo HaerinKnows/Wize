@@ -6,6 +6,28 @@ import { seedAccounts, seedBudgets, seedTransactions } from '@/mocks/seed';
 import { syncService } from '@/services/syncService';
 import { getPreferredCurrency } from '@/utils/currency';
 
+export type SharedAccount = {
+  id: string;
+  name: string;
+  members: string[];
+  balanceMinor: number;
+  currency: string;
+  createdAt: string;
+};
+
+export type UserProfile = {
+  displayName: string;
+  email: string;
+  phone: string;
+};
+
+export type NotificationSettings = {
+  budgetAlerts: boolean;
+  billReminders: boolean;
+  aiInsights: boolean;
+  sharedAccountActivity: boolean;
+};
+
 type SyncResult = {
   ok: boolean;
   message: string;
@@ -83,6 +105,12 @@ type AppState = {
   byType: (type: TxType) => Transaction[];
   preferredCurrency: string;
   setPreferredCurrency: (currency: string) => void;
+  sharedAccounts: SharedAccount[];
+  addSharedAccount: (account: { name: string; members: string[]; balanceMinor: number }) => void;
+  userProfile: UserProfile;
+  updateUserProfile: (profile: UserProfile) => void;
+  notificationSettings: NotificationSettings;
+  updateNotificationSettings: (settings: Partial<NotificationSettings>) => void;
   deleteTransaction: (id: string) => void;
   walletBalanceMinor: number;
   setWalletBalance: (balanceMinor: number) => void;
@@ -103,6 +131,56 @@ export const useAppStore = create<AppState>()(
       syncInProgress: false,
       preferredCurrency: 'PHP',
       setPreferredCurrency: (currency) => set({ preferredCurrency: currency }),
+      sharedAccounts: [],
+      addSharedAccount: ({ name, members, balanceMinor }) =>
+        set((state) => {
+          const currency = getPreferredCurrency();
+          const id = `shared_${Date.now()}`;
+
+          return {
+            sharedAccounts: [
+              {
+                id,
+                name,
+                members,
+                balanceMinor,
+                currency,
+                createdAt: new Date().toISOString()
+              },
+              ...state.sharedAccounts
+            ],
+            accounts: [
+              {
+                id,
+                name,
+                type: 'shared',
+                balanceMinor,
+                currency,
+                provider: 'Shared Account'
+              },
+              ...state.accounts
+            ]
+          };
+        }),
+      userProfile: {
+        displayName: '',
+        email: '',
+        phone: ''
+      },
+      updateUserProfile: (profile) => set({ userProfile: profile }),
+      notificationSettings: {
+        budgetAlerts: true,
+        billReminders: true,
+        aiInsights: true,
+        sharedAccountActivity: true
+      },
+      updateNotificationSettings: (settings) =>
+        set((state) => ({
+          notificationSettings: {
+            ...state.notificationSettings,
+            ...settings
+          }
+        })),
       addTransaction: (tx) =>
         set((state) => {
           const preferredCurrency = getPreferredCurrency();
@@ -256,6 +334,9 @@ export const useAppStore = create<AppState>()(
         integrationStatus: state.integrationStatus,
         lastSyncAt: state.lastSyncAt,
         preferredCurrency: state.preferredCurrency,
+        sharedAccounts: state.sharedAccounts,
+        userProfile: state.userProfile,
+        notificationSettings: state.notificationSettings,
         walletBalanceMinor: state.walletBalanceMinor
       })
     }

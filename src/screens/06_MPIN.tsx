@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Keyboard, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { NumericPinPad } from '@/components/NumericPinPad';
 import { RoundedButton } from '@/components/RoundedButton';
 import { Chip } from '@/components/Chip';
@@ -13,6 +13,8 @@ import { useTheme } from '@/theme/ThemeProvider';
 type MpinMode = 'loading' | 'setup' | 'verify';
 
 export default function MpinScreen() {
+  const params = useLocalSearchParams<{ fromSettings?: string }>();
+  const openedFromSettings = params.fromSettings === '1';
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [pin, setPin] = useState('');
@@ -44,7 +46,7 @@ export default function MpinScreen() {
         setLength(existingLength);
         setMode('verify');
       } else {
-        if (!isSignup) {
+        if (!isSignup && !openedFromSettings) {
           // Point 2: If logging in and no MPIN on this device, skip the "Create MPIN" screen
           completeAuth();
           router.replace('/dashboard');
@@ -59,7 +61,7 @@ export default function MpinScreen() {
     return () => {
       active = false;
     };
-  }, [userId]);
+  }, [completeAuth, isSignup, openedFromSettings, userId]);
 
   const isConfirmStep = mode === 'setup' && pin.length === length;
   const activeValue = mode === 'verify' ? pin : isConfirmStep ? confirm : pin;
@@ -151,7 +153,7 @@ export default function MpinScreen() {
       }
 
       completeAuth();
-      router.replace('/dashboard');
+      router.replace(openedFromSettings ? '/security' : '/dashboard');
       return;
     }
 
@@ -163,6 +165,10 @@ export default function MpinScreen() {
 
     await securityService.setMpin(userId, pin);
     markMpinConfigured();
+    if (openedFromSettings) {
+      router.replace('/security');
+      return;
+    }
     router.push('/biometric-enroll');
   };
 

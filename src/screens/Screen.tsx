@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, V
 import { spacing, ThemeColors } from '@/design/tokens';
 import { useTheme } from '@/theme/ThemeProvider';
 
+import { AdBanner } from '@/components/AdBanner';
 import { BottomNavBar } from '@/components/BottomNavBar';
 
 export function Screen({
@@ -29,7 +30,7 @@ export function Screen({
       contentContainerStyle={[
         styles.container,
         style,
-        !hideBottomBar && { paddingBottom: spacing.xl * 4 }
+        !hideBottomBar && { paddingBottom: spacing.xl * 6 }
       ]}
       keyboardDismissMode="interactive"
       keyboardShouldPersistTaps="handled"
@@ -38,7 +39,7 @@ export function Screen({
       {children}
     </ScrollView>
   ) : (
-    <View style={[styles.container, { flex: 1 }, style, !hideBottomBar && { paddingBottom: spacing.xl * 4 }]}>
+    <View style={[styles.container, { flex: 1 }, style, !hideBottomBar && { paddingBottom: spacing.xl * 6 }]}>
       {children}
     </View>
   );
@@ -52,6 +53,7 @@ export function Screen({
       >
         {content}
       </KeyboardAvoidingView>
+      {!hideBottomBar && <AdBanner />}
       {!hideBottomBar && <BottomNavBar />}
     </SafeAreaView>
   );

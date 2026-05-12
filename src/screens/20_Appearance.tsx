@@ -32,7 +32,7 @@ export default function AppearanceScreen() {
   const handleSelect = (option: ThemeOption) => {
     if (option.isPremium && !isPremium) {
       alert("Upgrade to Wize Premium to unlock this theme!");
-      router.push('/account');
+      router.push('/premium');
       return;
     }
     setMode(option.id);

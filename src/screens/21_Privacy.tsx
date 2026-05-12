@@ -19,7 +19,7 @@ export default function PrivacyScreen() {
   const handleToggleVault = (value: boolean) => {
     if (!isPremium) {
       alert("Upgrade to Wize Premium to unlock the Biometric Vault!");
-      router.push('/account');
+      router.push('/premium');
       return;
     }
     setVaultEnabled(value);
@@ -82,7 +82,7 @@ export default function PrivacyScreen() {
             <Text style={styles.premiumText}>
               Get military-grade protection for your financial data with biometric locks.
             </Text>
-            <Pressable style={styles.upgradeBtn} onPress={() => router.push('/account')}>
+            <Pressable style={styles.upgradeBtn} onPress={() => router.push('/premium')}>
               <Text style={styles.upgradeBtnText}>Learn More</Text>
             </Pressable>
           </Card>

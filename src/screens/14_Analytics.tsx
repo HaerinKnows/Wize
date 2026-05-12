@@ -374,7 +374,7 @@ export default function AnalyticsScreen() {
         </View>
 
         {!isPremium ? (
-          <Pressable style={styles.upgradeCard} onPress={() => router.push('/account')}>
+          <Pressable style={styles.upgradeCard} onPress={() => router.push('/premium')}>
             <View style={styles.upgradeContent}>
               <Ionicons name="sparkles" size={24} color="#FFD700" />
               <View style={{ flex: 1 }}>

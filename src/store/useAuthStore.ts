@@ -7,18 +7,24 @@ type AuthState = {
   isSignup: boolean;
   userId?: string;
   pendingUserId?: string;
+  userEmail?: string;
+  userName?: string;
   twoFactorVerified: boolean;
   mpinSet: boolean;
   isPremium: boolean;
+  trialEndsAt?: string;
+  subscriptionStatus: 'none' | 'trial' | 'active' | 'expired';
   biometricEnabled: boolean;
   biometricByUser: Record<string, boolean>;
   setPremium: (enabled: boolean) => void;
-  startAuth: (userId: string, isSignup: boolean) => void;
+  startTrial: () => void;
+  startAuth: (userId: string, isSignup: boolean, userData?: { email?: string; name?: string }) => void;
   verify2fa: () => void;
   completeAuth: () => void;
   setMpin: () => void;
   setBiometric: (enabled: boolean) => void;
   logout: () => void;
+  checkSubscription: () => void;
 };
 
 export const useAuthStore = create<AuthState>()(
@@ -29,16 +35,28 @@ export const useAuthStore = create<AuthState>()(
       twoFactorVerified: false,
       mpinSet: false,
       isPremium: false,
+      subscriptionStatus: 'none',
       biometricEnabled: false,
       biometricByUser: {},
-      setPremium: (enabled) => set({ isPremium: enabled }),
-      startAuth: (userId, isSignup) =>
+      setPremium: (enabled) => set({ isPremium: enabled, subscriptionStatus: enabled ? 'active' : 'none' }),
+      startTrial: () => {
+        const ends = new Date();
+        ends.setDate(ends.getDate() + 30);
+        set({
+          isPremium: true,
+          subscriptionStatus: 'trial',
+          trialEndsAt: ends.toISOString()
+        });
+      },
+      startAuth: (userId, isSignup, userData) =>
         set((state) => ({
           pendingUserId: userId,
           isSignup,
           twoFactorVerified: false,
           isAuthenticated: false,
-          biometricEnabled: state.biometricByUser[userId] ?? false
+          biometricEnabled: state.biometricByUser[userId] ?? false,
+          userEmail: userData?.email,
+          userName: userData?.name
         })),
       verify2fa: () => {
         const pendingUserId = get().pendingUserId;
@@ -64,6 +82,15 @@ export const useAuthStore = create<AuthState>()(
             biometricByUser: { ...state.biometricByUser, [targetUserId]: enabled }
           };
         }),
+      checkSubscription: () => {
+        const { trialEndsAt, subscriptionStatus, isPremium } = get();
+        if (subscriptionStatus === 'trial' && trialEndsAt) {
+          const hasEnded = new Date(trialEndsAt) < new Date();
+          if (hasEnded) {
+            set({ isPremium: false, subscriptionStatus: 'expired' });
+          }
+        }
+      },
       logout: () =>
         set({
           isAuthenticated: false,
@@ -82,7 +109,11 @@ export const useAuthStore = create<AuthState>()(
         mpinSet: state.mpinSet,
         biometricEnabled: state.biometricEnabled,
         biometricByUser: state.biometricByUser,
-        isPremium: state.isPremium
+        isPremium: state.isPremium,
+        subscriptionStatus: state.subscriptionStatus,
+        trialEndsAt: state.trialEndsAt,
+        userEmail: state.userEmail,
+        userName: state.userName
       })
     }
   )

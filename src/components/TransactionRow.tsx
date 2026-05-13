@@ -29,7 +29,21 @@ export function TransactionRow({
       <View style={{ flex: 1 }}>
         <Text style={styles.category}>{toCategoryLabel(category)}</Text>
         {noteText ? <Text style={styles.note}>{noteText}</Text> : null}
-        <Text style={styles.time}>{new Date(timestamp).toLocaleString()}</Text>
+        <Text style={styles.time}>
+          {(() => {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const isToday = date.toDateString() === now.toDateString();
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const isYesterday = date.toDateString() === yesterday.toDateString();
+
+            const timeStr = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+            if (isToday) return `Today, ${timeStr}`;
+            if (isYesterday) return `Yesterday, ${timeStr}`;
+            return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+          })()}
+        </Text>
       </View>
       <View style={styles.rightSide}>
         <Text style={[styles.amount, amountMinor < 0 && styles.expense]}>

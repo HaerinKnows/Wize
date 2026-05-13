@@ -5,6 +5,7 @@ import { Account, Budget, IntegrationState, Transaction, TxType } from '@/types/
 import { seedAccounts, seedBudgets, seedTransactions } from '@/mocks/seed';
 import { syncService } from '@/services/syncService';
 import { getPreferredCurrency } from '@/utils/currency';
+import { getPeriodRange, isTimestampInRange, toLocalDateKey } from '@/utils/periods';
 
 export type SharedAccount = {
   id: string;
@@ -113,8 +114,11 @@ type AppState = {
   updateNotificationSettings: (settings: Partial<NotificationSettings>) => void;
   deleteTransaction: (id: string) => void;
   walletBalanceMinor: number;
-  setWalletBalance: (balanceMinor: number) => void;
-  getRemainingBalance: (userId: string) => number;
+  walletBalanceDate?: string;
+  dailyWalletBalances: Record<string, number>;
+  setWalletBalance: (balanceMinor: number, dateKey?: string) => void;
+  getDailyWalletBalance: (dateKey?: string) => number | undefined;
+  getRemainingBalance: (userId: string, date?: Date) => number;
 };
 
 export const useAppStore = create<AppState>()(
@@ -202,7 +206,27 @@ export const useAppStore = create<AppState>()(
           transactions: state.transactions.filter((t) => t.id !== id)
         })),
       walletBalanceMinor: 0,
-      setWalletBalance: (balanceMinor) => set({ walletBalanceMinor: balanceMinor }),
+      walletBalanceDate: undefined,
+      dailyWalletBalances: {},
+      setWalletBalance: (balanceMinor, dateKey = toLocalDateKey()) =>
+        set((state) => ({
+          walletBalanceMinor: balanceMinor,
+          walletBalanceDate: dateKey,
+          dailyWalletBalances: {
+            ...state.dailyWalletBalances,
+            [dateKey]: balanceMinor
+          }
+        })),
+      getDailyWalletBalance: (dateKey = toLocalDateKey()) => {
+        const state = get();
+        if (state.dailyWalletBalances[dateKey] !== undefined) {
+          return state.dailyWalletBalances[dateKey];
+        }
+        if (state.walletBalanceDate === dateKey) {
+          return state.walletBalanceMinor;
+        }
+        return undefined;
+      },
       addBudget: (budget) => {
         const id = `bud_${Date.now()}`;
         set((state) => ({
@@ -315,13 +339,19 @@ export const useAppStore = create<AppState>()(
         return { income, expense, total: income - expense };
       },
       byType: (type) => get().transactions.filter((t) => t.type === type),
-      getRemainingBalance: (ownerUserId) => {
+      getRemainingBalance: (ownerUserId, date = new Date()) => {
         const state = get();
+        const dateKey = toLocalDateKey(date);
+        const range = getPeriodRange('day', date);
+        const startingBalance =
+          state.dailyWalletBalances[dateKey] ?? (state.walletBalanceDate === dateKey ? state.walletBalanceMinor : 0);
         const userTxs = state.transactions.filter(
-          (tx) => (tx.ownerUserId ?? 'user_demo') === ownerUserId
+          (tx) =>
+            (tx.ownerUserId ?? 'user_demo') === ownerUserId &&
+            isTimestampInRange(tx.timestamp, range)
         );
         const sum = userTxs.reduce((acc, tx) => acc + tx.amountMinor, 0);
-        return state.walletBalanceMinor + sum;
+        return startingBalance + sum;
       }
     }),
     {
@@ -337,7 +367,9 @@ export const useAppStore = create<AppState>()(
         sharedAccounts: state.sharedAccounts,
         userProfile: state.userProfile,
         notificationSettings: state.notificationSettings,
-        walletBalanceMinor: state.walletBalanceMinor
+        walletBalanceMinor: state.walletBalanceMinor,
+        walletBalanceDate: state.walletBalanceDate,
+        dailyWalletBalances: state.dailyWalletBalances
       })
     }
   )

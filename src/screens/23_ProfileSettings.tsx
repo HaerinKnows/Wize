@@ -16,17 +16,17 @@ export default function ProfileSettingsScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const profile = useAppStore((state) => state.userProfile);
   const updateUserProfile = useAppStore((state) => state.updateUserProfile);
-  const userId = useAuthStore((state) => state.userId);
-  const [displayName, setDisplayName] = useState(profile.displayName);
-  const [email, setEmail] = useState(profile.email);
-  const [phone, setPhone] = useState(profile.phone);
+  const { userId, userEmail, userName } = useAuthStore();
+  
+  const [displayName, setDisplayName] = useState(profile.displayName || userName || '');
+  const [email, setEmail] = useState(profile.email || userEmail || '');
   const [saved, setSaved] = useState(false);
 
   const saveProfile = () => {
     updateUserProfile({
       displayName: displayName.trim(),
       email: email.trim(),
-      phone: phone.trim()
+      phone: ''
     });
     setSaved(true);
   };
@@ -51,7 +51,6 @@ export default function ProfileSettingsScreen() {
         <Text style={styles.sectionTitle}>Profile Details</Text>
         <Input placeholder="Display name" value={displayName} onChangeText={setDisplayName} />
         <Input placeholder="Email address" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-        <Input placeholder="Phone number" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
         <RoundedButton label="Save Profile" onPress={saveProfile} />
         {saved ? <Text style={styles.savedText}>Profile updated.</Text> : null}
       </View>

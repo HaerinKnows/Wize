@@ -27,7 +27,7 @@ export default function LoginEmailScreen() {
     try {
       const res = await authService.login(email, password);
       const userId = res.userId ?? '';
-      startAuth(userId, false);
+      startAuth(userId, false, { email });
       router.push('/two-factor');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to log in.');

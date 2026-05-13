@@ -51,7 +51,7 @@ const getWeekRange = (date: Date) => {
   const day = start.getDay();
   const diff = start.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
   start.setDate(diff);
-  start.setHours(0,0,0,0);
+  start.setHours(0, 0, 0, 0);
   const end = new Date(start);
   end.setDate(start.getDate() + 7);
   return { start: start.getTime(), end: end.getTime() };
@@ -59,7 +59,7 @@ const getWeekRange = (date: Date) => {
 
 const getDayRange = (date: Date) => {
   const start = new Date(date);
-  start.setHours(0,0,0,0);
+  start.setHours(0, 0, 0, 0);
   const end = new Date(start);
   end.setDate(start.getDate() + 1);
   return { start: start.getTime(), end: end.getTime() };
@@ -225,9 +225,9 @@ export default function AnalyticsScreen() {
     }
     if (periodType === 'week') {
       const r = getWeekRange(baseDate);
-      return { 
-        range: r, 
-        formattedDateRange: `${dateFormatter.format(new Date(r.start))} - ${dateFormatter.format(new Date(r.end - 1))}` 
+      return {
+        range: r,
+        formattedDateRange: `${dateFormatter.format(new Date(r.start))} - ${dateFormatter.format(new Date(r.end - 1))}`
       };
     }
     if (periodType === 'month') {
@@ -294,120 +294,120 @@ export default function AnalyticsScreen() {
     <Screen style={styles.container}>
       <Text style={styles.pageTitle}>Get personalized insights</Text>
 
-        <View style={styles.card}>
-          <Pressable
-            style={styles.metricTypeButton}
-            onPress={() => setMetricType((prev) => (prev === 'expense' ? 'income' : 'expense'))}
-          >
-            <Text style={styles.metricTypeText}>{metricType === 'expense' ? 'Expenses ▼' : 'Income ▼'}</Text>
-          </Pressable>
+      <View style={styles.card}>
+        <Pressable
+          style={styles.metricTypeButton}
+          onPress={() => setMetricType((prev) => (prev === 'expense' ? 'income' : 'expense'))}
+        >
+          <Text style={styles.metricTypeText}>{metricType === 'expense' ? 'Expenses ▼' : 'Income ▼'}</Text>
+        </Pressable>
 
-          <View style={styles.periodSwitch}>
-            <SegmentPill label="Day" selected={periodType === 'day'} onPress={() => setPeriodType('day')} styles={styles} />
-            <SegmentPill label="Week" selected={periodType === 'week'} onPress={() => setPeriodType('week')} styles={styles} />
-            <SegmentPill label="Month" selected={periodType === 'month'} onPress={() => setPeriodType('month')} styles={styles} />
-            <SegmentPill label="Year" selected={periodType === 'year'} onPress={() => setPeriodType('year')} styles={styles} />
-          </View>
-
-          <View style={styles.dateNavigator}>
-            <Pressable onPress={onPrev} style={styles.navButton}>
-              <Ionicons name="chevron-back" size={24} color={colors.primary} />
-            </Pressable>
-            <Text style={styles.dateLabel}>{formattedDateRange}</Text>
-            <Pressable onPress={onNext} style={styles.navButton}>
-              <Ionicons name="chevron-forward" size={24} color={colors.primary} />
-            </Pressable>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.chartSection}>
-            <DonutChart 
-              categories={topList} 
-              styles={styles} 
-              ringTrackColor={colors.line} 
-              currency={displayCurrency} 
-            />
-            <View style={styles.legendWrap}>
-              {topList.length === 0 ? <Text style={styles.emptyText}>No data for this period yet.</Text> : null}
-              {topList.map((item) => (
-                <View key={item.key} style={styles.legendItem}>
-                  <View style={[styles.legendDot, { borderColor: item.color }]} />
-                  <Text style={styles.legendLabel}>{item.label}</Text>
-                  <Text style={styles.legendPercent}>{item.percent.toFixed(2)}%</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.divider} />
-
-          <Text style={styles.topListTitle}>Top lists</Text>
-          {topList.length === 0 ? <Text style={styles.topListEmpty}>No category entries in this period yet.</Text> : null}
-
-          {topList.map((item) => (
-            <View key={`top_${item.key}`} style={styles.topItem}>
-              <View style={[styles.topIconWrap, { backgroundColor: `${item.color}33` }]}>
-                <Text style={styles.topIcon}>{categoryBadgeMap[item.key] ?? 'TX'}</Text>
-              </View>
-
-              <View style={styles.topMain}>
-                <View style={styles.topMainHeader}>
-                  <Text style={styles.topLabel}>{item.label}</Text>
-                  <Text style={styles.topPercent}>{item.percent.toFixed(2)}%</Text>
-                </View>
-                <View style={styles.progressTrack}>
-                  <View style={[styles.progressFill, { width: `${Math.max(8, item.percent)}%` }]} />
-                </View>
-              </View>
-
-              <Text style={styles.topAmount}>{formatCurrency(item.amountMinor, displayCurrency)}</Text>
-            </View>
-          ))}
+        <View style={styles.periodSwitch}>
+          <SegmentPill label="Day" selected={periodType === 'day'} onPress={() => setPeriodType('day')} styles={styles} />
+          <SegmentPill label="Week" selected={periodType === 'week'} onPress={() => setPeriodType('week')} styles={styles} />
+          <SegmentPill label="Month" selected={periodType === 'month'} onPress={() => setPeriodType('month')} styles={styles} />
+          <SegmentPill label="Year" selected={periodType === 'year'} onPress={() => setPeriodType('year')} styles={styles} />
         </View>
 
-        <View style={styles.insightsHeader}>
-          <Text style={styles.insightsTitle}>Predictive Insights</Text>
-          <View style={styles.premiumBadge}>
-            <Text style={styles.premiumBadgeText}>PREMIUM</Text>
-          </View>
+        <View style={styles.dateNavigator}>
+          <Pressable onPress={onPrev} style={styles.navButton}>
+            <Ionicons name="chevron-back" size={24} color={colors.primary} />
+          </Pressable>
+          <Text style={styles.dateLabel}>{formattedDateRange}</Text>
+          <Pressable onPress={onNext} style={styles.navButton}>
+            <Ionicons name="chevron-forward" size={24} color={colors.primary} />
+          </Pressable>
         </View>
 
-        {!isPremium ? (
-          <Pressable style={styles.upgradeCard} onPress={() => router.push('/premium')}>
-            <View style={styles.upgradeContent}>
-              <Ionicons name="sparkles" size={24} color="#FFD700" />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.upgradeTitle}>Unlock AI Coaching</Text>
-                <Text style={styles.upgradeSubtitle}>Get proactive alerts and goal optimization</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-            </View>
-          </Pressable>
-        ) : (
-          <View style={styles.insightsList}>
-            {loadingInsights && <Text style={styles.loadingText}>Analyzing your spending patterns...</Text>}
-            {!loadingInsights && insights.length === 0 && (
-              <Text style={styles.emptyText}>No insights available for this period yet.</Text>
-            )}
-            {insights.map((insight, idx) => (
-              <View key={`insight_${idx}`} style={[styles.insightCard, insight.type === 'alert' ? styles.insightAlert : styles.insightOptimization]}>
-                <View style={styles.insightIconWrap}>
-                  <Ionicons 
-                    name={insight.type === 'alert' ? 'warning-outline' : 'trending-up-outline'} 
-                    size={20} 
-                    color={insight.type === 'alert' ? colors.danger : colors.success} 
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.insightCardTitle}>{insight.title}</Text>
-                  <Text style={styles.insightCardDetail}>{insight.detail}</Text>
-                  {insight.impact && <Text style={styles.insightCardImpact}>{insight.impact}</Text>}
-                </View>
+        <View style={styles.divider} />
+
+        <View style={styles.chartSection}>
+          <DonutChart
+            categories={topList}
+            styles={styles}
+            ringTrackColor={colors.line}
+            currency={displayCurrency}
+          />
+          <View style={styles.legendWrap}>
+            {topList.length === 0 ? <Text style={styles.emptyText}>No data for this period yet.</Text> : null}
+            {topList.map((item) => (
+              <View key={item.key} style={styles.legendItem}>
+                <View style={[styles.legendDot, { borderColor: item.color }]} />
+                <Text style={styles.legendLabel}>{item.label}</Text>
+                <Text style={styles.legendPercent}>{item.percent.toFixed(2)}%</Text>
               </View>
             ))}
           </View>
-        )}
+        </View>
+
+        <View style={styles.divider} />
+
+        <Text style={styles.topListTitle}>Top lists</Text>
+        {topList.length === 0 ? <Text style={styles.topListEmpty}>No category entries in this period yet.</Text> : null}
+
+        {topList.map((item) => (
+          <View key={`top_${item.key}`} style={styles.topItem}>
+            <View style={[styles.topIconWrap, { backgroundColor: `${item.color}33` }]}>
+              <Text style={styles.topIcon}>{categoryBadgeMap[item.key] ?? 'TX'}</Text>
+            </View>
+
+            <View style={styles.topMain}>
+              <View style={styles.topMainHeader}>
+                <Text style={styles.topLabel}>{item.label}</Text>
+                <Text style={styles.topPercent}>{item.percent.toFixed(2)}%</Text>
+              </View>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${Math.max(8, item.percent)}%` }]} />
+              </View>
+            </View>
+
+            <Text style={styles.topAmount}>{formatCurrency(item.amountMinor, displayCurrency)}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.insightsHeader}>
+        <Text style={styles.insightsTitle}>Predictive Insights</Text>
+        <View style={styles.premiumBadge}>
+          <Text style={styles.premiumBadgeText}>PREMIUM</Text>
+        </View>
+      </View>
+
+      {!isPremium ? (
+        <Pressable style={styles.upgradeCard} onPress={() => router.push('/premium')}>
+          <View style={styles.upgradeContent}>
+            <Ionicons name="sparkles" size={24} color="#FFD700" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.upgradeTitle}>Unlock AI Coaching</Text>
+              <Text style={styles.upgradeSubtitle}>Get proactive alerts and goal optimization</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          </View>
+        </Pressable>
+      ) : (
+        <View style={styles.insightsList}>
+          {loadingInsights && <Text style={styles.loadingText}>Analyzing your spending patterns...</Text>}
+          {!loadingInsights && insights.length === 0 && (
+            <Text style={styles.emptyText}>No insights available for this period yet.</Text>
+          )}
+          {insights.map((insight, idx) => (
+            <View key={`insight_${idx}`} style={[styles.insightCard, insight.type === 'alert' ? styles.insightAlert : styles.insightOptimization]}>
+              <View style={styles.insightIconWrap}>
+                <Ionicons
+                  name={insight.type === 'alert' ? 'warning-outline' : 'trending-up-outline'}
+                  size={20}
+                  color={insight.type === 'alert' ? colors.danger : colors.success}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.insightCardTitle}>{insight.title}</Text>
+                <Text style={styles.insightCardDetail}>{insight.detail}</Text>
+                {insight.impact && <Text style={styles.insightCardImpact}>{insight.impact}</Text>}
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
     </Screen>
   );
 }

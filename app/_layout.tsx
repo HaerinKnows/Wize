@@ -48,6 +48,7 @@ function RootStack() {
         <Stack.Screen name="scan-sms" />
         <Stack.Screen name="budgets" />
         <Stack.Screen name="analytics" />
+        <Stack.Screen name="history" />
         <Stack.Screen name="achievements" />
         <Stack.Screen name="goal-setter" />
         <Stack.Screen name="smart-tips" />

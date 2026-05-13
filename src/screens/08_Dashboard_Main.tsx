@@ -1,11 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal as RNModal, Pressable, StyleSheet, Text, View, Modal, TextInput } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Card } from '@/components/Card';
-import { Chip } from '@/components/Chip';
 import { Input } from '@/components/Input';
 import { RoundedButton } from '@/components/RoundedButton';
-import { FloatingActionButton } from '@/components/FloatingActionButton';
 import { Toast } from '@/components/Toast';
 import { TransactionRow } from '@/components/TransactionRow';
 import { Screen } from '@/screens/Screen';
@@ -14,6 +12,8 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { radius, spacing, ThemeColors, typography } from '@/design/tokens';
 import { ThemeMode, useTheme } from '@/theme/ThemeProvider';
 import { fromMajor, formatCurrency } from '@/utils/currency';
+import { getPeriodRange, isTimestampInRange, TransactionPeriod, toLocalDateKey } from '@/utils/periods';
+import { InlineAd } from '@/components/InlineAd';
 
 type MenuItem = {
   label: string;
@@ -26,11 +26,19 @@ const menuItems: MenuItem[] = [
   { label: 'Smart Tips', route: '/smart-tips' },
   { label: 'Achievements', route: '/achievements' },
   { label: 'Analytics', route: '/analytics' },
+  { label: 'History', route: '/history' },
   { label: 'Goal Setter', route: '/goal-setter' },
   { label: 'Budgets', route: '/budgets' },
   { label: 'Add Transaction', route: '/add-transaction' },
   { label: 'Log Out', danger: true }
 ];
+
+const periodLabels: Record<TransactionPeriod, string> = {
+  day: 'Recent Transactions',
+  week: 'Past Week',
+  month: 'Past Month',
+  year: 'Past Year'
+};
 
 function HamburgerIcon({ color }: { color: string }) {
   return (
@@ -57,6 +65,8 @@ export default function DashboardMainScreen() {
   const preferredCurrency = useAppStore((s) => s.preferredCurrency);
 
   const walletBalanceMinor = useAppStore((s) => s.walletBalanceMinor);
+  const walletBalanceDate = useAppStore((s) => s.walletBalanceDate);
+  const getDailyWalletBalance = useAppStore((s) => s.getDailyWalletBalance);
   const setWalletBalance = useAppStore((s) => s.setWalletBalance);
   const deleteTransaction = useAppStore((s) => s.deleteTransaction);
   const getRemainingBalance = useAppStore((s) => s.getRemainingBalance);
@@ -65,12 +75,25 @@ export default function DashboardMainScreen() {
   
   const [balanceInput, setBalanceInput] = useState('');
   const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [transactionPeriod, setTransactionPeriod] = useState<TransactionPeriod>('day');
+
+  const { setPremium, checkSubscription } = useAuthStore();
 
   useEffect(() => {
-    if (walletBalanceMinor === 0) {
-      setShowBalanceModal(true);
+    checkSubscription();
+  }, [checkSubscription]);
+
+  useEffect(() => {
+    // Forcing premium to false for ad testing ONLY for my account
+    if (userId === 'user_79807800d0a114c1b1df6e8e') {
+      setPremium(false);
     }
-  }, [walletBalanceMinor]);
+  }, [setPremium, userId]);
+
+  useEffect(() => {
+    const todayKey = toLocalDateKey();
+    setShowBalanceModal(getDailyWalletBalance(todayKey) === undefined);
+  }, [getDailyWalletBalance, walletBalanceDate, walletBalanceMinor]);
 
   const handleSetBalance = () => {
     const val = parseFloat(balanceInput);
@@ -82,8 +105,15 @@ export default function DashboardMainScreen() {
 
   const recentTransactions = useMemo(() => {
     const effectiveUserId = userId ?? 'user_demo';
-    return allTransactions.filter((t) => (t.ownerUserId ?? 'user_demo') === effectiveUserId).slice(0, 6);
-  }, [allTransactions, userId]);
+    const range = getPeriodRange(transactionPeriod);
+    return allTransactions
+      .filter(
+        (t) =>
+          (t.ownerUserId ?? 'user_demo') === effectiveUserId &&
+          isTimestampInRange(t.timestamp, range)
+      )
+      .slice(0, 6);
+  }, [allTransactions, transactionPeriod, userId]);
 
   const onMenuPress = (item: MenuItem) => {
     setMenuOpen(false);
@@ -129,30 +159,88 @@ export default function DashboardMainScreen() {
       </Card>
 
       <Card
-        header="Recent Transactions"
+        header={periodLabels[transactionPeriod]}
         rightAccessory={
-          <Pressable
-            accessibilityLabel="Add transaction"
-            accessibilityRole="button"
-            onPress={() => router.push('/add-transaction')}
-            style={styles.addInlineButton}
-          >
-            <Text style={styles.addInlineButtonText}>+</Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              accessibilityLabel="Transaction history"
+              accessibilityRole="button"
+              onPress={() => router.push('/history')}
+              style={styles.historyButton}
+            >
+              <Text style={styles.historyButtonText}>History</Text>
+            </Pressable>
+            <Pressable
+              accessibilityLabel="Add transaction"
+              accessibilityRole="button"
+              onPress={() => router.push('/add-transaction')}
+              style={styles.addInlineButton}
+            >
+              <Text style={styles.addInlineButtonText}>+</Text>
+            </Pressable>
+          </View>
         }
       >
-        {recentTransactions.length === 0 ? <Text style={styles.empty}>No transactions yet.</Text> : null}
-        {recentTransactions.map((txn) => (
-          <TransactionRow
-            key={txn.id}
-            category={txn.category}
-            amountMinor={txn.amountMinor}
-            timestamp={txn.timestamp}
-            currency={txn.currency || preferredCurrency}
-            notes={txn.notes}
-            onDelete={() => deleteTransaction(txn.id)}
-          />
-        ))}
+        <View style={styles.periodTabs}>
+          {(Object.keys(periodLabels) as TransactionPeriod[]).map((period) => (
+            <Pressable
+              key={period}
+              accessibilityRole="button"
+              onPress={() => setTransactionPeriod(period)}
+              style={[styles.periodTab, transactionPeriod === period && styles.periodTabSelected]}
+            >
+              <Text style={[styles.periodTabText, transactionPeriod === period && styles.periodTabTextSelected]}>
+                {period === 'day' ? 'Day' : periodLabels[period].replace('Past ', '')}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {recentTransactions.length === 0 ? <Text style={styles.empty}>No transactions for this period yet.</Text> : null}
+        {(() => {
+          const groups = new Map<string, typeof recentTransactions>();
+          recentTransactions.forEach((t) => {
+            const key = toLocalDateKey(t.timestamp);
+            groups.set(key, [...(groups.get(key) ?? []), t]);
+          });
+
+          const today = toLocalDateKey();
+          const yesterdayDate = new Date();
+          yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+          const yesterday = toLocalDateKey(yesterdayDate);
+
+          return Array.from(groups.entries())
+            .sort(([a], [b]) => b.localeCompare(a))
+            .map(([dateKey, items], index) => {
+              let groupTitle = dateKey;
+              if (dateKey === today) groupTitle = 'Recent Transactions';
+              else if (dateKey === yesterday) groupTitle = 'Past Day';
+              else {
+                const d = new Date(dateKey);
+                groupTitle = d.toLocaleDateString(undefined, { dateStyle: 'medium' });
+              }
+
+              return (
+                <View key={dateKey}>
+                  {transactionPeriod !== 'day' && (
+                    <Text style={styles.groupTitle}>{groupTitle}</Text>
+                  )}
+                  {items.map((txn) => (
+                    <TransactionRow
+                      key={txn.id}
+                      category={txn.category}
+                      amountMinor={txn.amountMinor}
+                      timestamp={txn.timestamp}
+                      currency={txn.currency || preferredCurrency}
+                      notes={txn.notes}
+                      onDelete={() => deleteTransaction(txn.id)}
+                    />
+                  ))}
+                  {index === 0 && <InlineAd />}
+                </View>
+              );
+            });
+        })()}
       </Card>
 
       <Text style={styles.sync}>Sync: {lastSync ? new Date(lastSync).toLocaleString() : 'Pending'}</Text>
@@ -172,7 +260,7 @@ export default function DashboardMainScreen() {
       <Modal visible={showBalanceModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <Card style={styles.balanceCard} header="Setup Wallet Balance">
-            <Text style={styles.balanceLabel}>How much is your current wallet balance? This will be your daily tracking limit.</Text>
+            <Text style={styles.balanceLabel}>How much money do you have today? Wize will ask once per day and keep old days separate.</Text>
             <Input 
               placeholder="e.g. 5000" 
               value={balanceInput} 
@@ -351,5 +439,57 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 20,
       fontWeight: '700',
       lineHeight: 22
+    },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs
+    },
+    historyButton: {
+      minHeight: 32,
+      paddingHorizontal: spacing.sm,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.line,
+      alignItems: 'center',
+      justifyContent: 'center'
+    },
+    historyButtonText: {
+      ...typography.caption,
+      color: colors.textPrimary,
+      fontWeight: '700'
+    },
+    periodTabs: {
+      flexDirection: 'row',
+      borderWidth: 1,
+      borderColor: colors.line,
+      borderRadius: 8,
+      overflow: 'hidden',
+      marginBottom: spacing.sm
+    },
+    periodTab: {
+      flex: 1,
+      minHeight: 34,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.bg
+    },
+    periodTabSelected: {
+      backgroundColor: colors.primary
+    },
+    periodTabText: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      fontWeight: '700'
+    },
+    periodTabTextSelected: {
+      color: '#FFFFFF'
+    },
+    groupTitle: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      fontWeight: '700',
+      marginTop: spacing.sm,
+      marginBottom: spacing.xs
     }
   });

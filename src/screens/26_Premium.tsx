@@ -24,16 +24,30 @@ export default function PremiumScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [period, setPeriod] = useState<BillingPeriod>('monthly');
-  const setPremium = useAuthStore((state) => state.setPremium);
+  const { setPremium, startTrial, subscriptionStatus, trialEndsAt } = useAuthStore();
 
   const plan = period === 'monthly'
     ? { label: 'Monthly', price: 'PHP 59.99', detail: 'Billed every month' }
     : { label: 'Yearly', price: 'PHP 599.99', detail: 'Billed once per year' };
 
-  const activatePremium = () => {
-    setPremium(true);
-    router.replace('/account');
+  const hasTrialEnded = trialEndsAt ? new Date(trialEndsAt) < new Date() : false;
+  const isCurrentlyTrialing = subscriptionStatus === 'trial' && !hasTrialEnded;
+
+  const handleAction = () => {
+    if (subscriptionStatus === 'none' || (subscriptionStatus === 'expired')) {
+      // Start trial if they've never had one or it's totally reset
+      startTrial();
+      router.replace('/account');
+    } else {
+      // Otherwise, simulate payment/activation
+      setPremium(true);
+      router.replace('/account');
+    }
   };
+
+  const buttonLabel = (subscriptionStatus === 'none') 
+    ? `Start 30-Day Free Trial` 
+    : `Activate ${plan.label} Premium`;
 
   return (
     <Screen style={styles.container}>
@@ -63,9 +77,11 @@ export default function PremiumScreen() {
         <Text style={styles.planDetail}>{plan.detail}</Text>
         <View style={styles.trialRow}>
           <Ionicons name="gift-outline" size={18} color={colors.success} />
-          <Text style={styles.trialText}>Includes a 30-day free trial</Text>
+          <Text style={styles.trialText}>
+            {subscriptionStatus === 'none' ? 'Includes a 30-day free trial' : 'Your trial has ended. Subscribe to continue.'}
+          </Text>
         </View>
-        <RoundedButton label={`Choose ${plan.label}`} onPress={activatePremium} />
+        <RoundedButton label={buttonLabel} onPress={handleAction} />
       </Card>
 
       <View style={styles.featureList}>

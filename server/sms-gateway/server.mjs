@@ -689,7 +689,7 @@ const sendResendOtp = async (email, code) => {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      from: 'Wizenance <onboarding@resend.dev>',
+      from: 'Wizenance <hello@usewize.app>',
       to: [email],
       subject: 'Your Wizenance Verification Code',
       html: `<h2>Welcome to Wizenance!</h2><p>Your verification code is: <strong>${code}</strong></p><p>This code will expire in ${Math.floor(otpTtlMs / 60000)} minutes.</p>`

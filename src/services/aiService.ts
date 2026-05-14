@@ -74,6 +74,7 @@ export async function getCachedSmartTips() {
 export type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
+  timestamp?: string;
 };
 
 type ChatResponse = {
@@ -108,10 +109,17 @@ export async function chat(
     transactions: Transaction[];
     budgets: Budget[];
     currency: string;
-  }
+  },
+  userId?: string
 ) {
   return apiRequest<ChatResponse>('/ai/chat', {
     method: 'POST',
-    body: JSON.stringify({ history, snapshot })
+    body: JSON.stringify({ history, snapshot, userId })
+  });
+}
+
+export async function getChatHistory(userId: string) {
+  return apiRequest<{ history: ChatMessage[] }>(`/ai/history/${userId}`, {
+    method: 'GET'
   });
 }

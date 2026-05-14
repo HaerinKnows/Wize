@@ -48,6 +48,7 @@ const firebaseServiceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 const firestoreSyncCollection = process.env.FIRESTORE_SYNC_COLLECTION || 'userSyncSnapshots';
 const firestoreUsersCollection = process.env.FIRESTORE_USERS_COLLECTION || 'authUsers';
 const firestoreEmailIndexCollection = process.env.FIRESTORE_EMAIL_INDEX_COLLECTION || 'authEmailIndex';
+const firestoreChatCollection = process.env.FIRESTORE_CHAT_COLLECTION || 'chatMessages';
 const geminiApiKey = process.env.GEMINI_API_KEY;
 const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const geminiFallbackModel = process.env.GEMINI_FALLBACK_MODEL || 'gemini-2.5-flash-lite';
@@ -609,6 +610,22 @@ const saveAuthUser = async (user) => {
   });
 };
 
+const getChatHistory = async (userId) => {
+  if (!hasFirebaseConfig()) return [];
+  const history = await readFirestoreJsonDoc(firestoreChatCollection, userId, 'messagesJson');
+  return Array.isArray(history) ? history : [];
+};
+
+const saveChatMessage = async (userId, message) => {
+  if (!hasFirebaseConfig()) return;
+  const history = await getChatHistory(userId);
+  const newMessage = {
+    ...message,
+    timestamp: new Date().toISOString()
+  };
+  await writeFirestoreJsonDoc(firestoreChatCollection, userId, 'messagesJson', [...history, newMessage]);
+};
+
 const handleRegister = async (body) => {
   if (!hasFirebaseConfig()) {
     return { status: 503, payload: { error: 'Firebase auth storage is not configured.' } };
@@ -791,11 +808,34 @@ const server = http.createServer(async (req, res) => {
     try {
       const raw = await readBody(req);
       const body = raw ? JSON.parse(raw) : {};
-      const { history, snapshot } = body;
-      return json(res, 200, await generateChatResponse(history || [], snapshot || {}));
+      const { history, snapshot, userId } = body;
+      
+      const lastMessage = history[history.length - 1];
+      if (userId && lastMessage && lastMessage.role === 'user') {
+        await saveChatMessage(userId, lastMessage);
+      }
+
+      const response = await generateChatResponse(history || [], snapshot || {});
+      
+      if (userId && response.text) {
+        await saveChatMessage(userId, { role: 'assistant', content: response.text });
+      }
+
+      return json(res, 200, response);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown Gemini chat error.';
       return json(res, 500, { error: message, text: 'I am sorry, I encountered an error. Please try again.' });
+    }
+  }
+
+  if (req.method === 'GET' && req.url.startsWith('/ai/history/')) {
+    try {
+      const userId = req.url.split('/').pop();
+      if (!userId) return json(res, 400, { error: 'userId is required' });
+      const history = await getChatHistory(userId);
+      return json(res, 200, { history });
+    } catch (error) {
+      return json(res, 500, { error: 'Failed to fetch chat history' });
     }
   }
 

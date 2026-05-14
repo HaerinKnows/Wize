@@ -36,8 +36,7 @@ export default function SignUpScreen() {
 
     setSubmitting(true);
     try {
-      // Phone is now empty string as we are removing it.
-      const res = await authService.register(name, email, password, '');
+      const res = await authService.register(name, email, password);
       startAuth(res.userId, true, { email, name });
       router.push('/two-factor');
     } catch (err) {

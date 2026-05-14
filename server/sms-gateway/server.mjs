@@ -582,8 +582,7 @@ const verifyPassword = (password, storedHash) => {
 const publicUser = (user) => ({
   id: user.id,
   name: user.name,
-  email: user.email,
-  phone: user.phone
+  email: user.email
 });
 
 const getAuthUser = async (userId) => {
@@ -618,14 +617,12 @@ const handleRegister = async (body) => {
   const name = typeof body.name === 'string' ? body.name.trim() : '';
   const email = normalizeEmail(body.email);
   const password = typeof body.password === 'string' ? body.password : '';
-  const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
 
   if (name.length < 2) return { status: 400, payload: { error: 'Name must be at least 2 characters.' } };
   if (!isValidEmail(email)) return { status: 400, payload: { error: 'Please enter a valid email address.' } };
   if (!isStrongPassword(password)) {
     return { status: 400, payload: { error: 'Password must be 8+ chars and include letters and numbers.' } };
   }
-  if (!phone) return { status: 400, payload: { error: 'Phone number is required.' } };
 
   const existing = await findAuthUserByEmail(email);
   if (existing) return { status: 409, payload: { error: 'Email already exists. Please log in instead.' } };
@@ -635,7 +632,6 @@ const handleRegister = async (body) => {
     id: createUserId(),
     name,
     email,
-    phone,
     passwordHash: hashPassword(password),
     createdAt: now,
     updatedAt: now
@@ -726,7 +722,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && req.url === '/health') {
     return json(res, 200, {
       ok: true,
-      service: 'wizenance-email-gateway',
+      service: 'wize-email-gateway',
       syncStorage: syncStorageProvider(),
       ai: {
         provider: 'gemini',

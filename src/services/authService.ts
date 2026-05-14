@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { Platform } from 'react-native';
 import { secureStorage } from '@/security/secureStorage';
 
@@ -29,14 +28,12 @@ type AuthUser = {
   name: string;
   email: string;
   password: string;
-  phone: string;
 };
 
 type OtpSession = {
   method: Method;
   provider: 'local' | 'gateway';
   code?: string;
-  phone: string;
   expiresAt: number;
 };
 
@@ -55,8 +52,7 @@ const seedUsers: AuthUser[] = [
     id: 'user_demo',
     name: 'Demo User',
     email: 'demo@wizenance.app',
-    password: 'Wizenance123!',
-    phone: '+15551234567'
+    password: 'Wizenance123!'
   }
 ];
 
@@ -67,44 +63,6 @@ const isStrongPassword = (password: string) =>
 const isCloudUrl = (url: string) => Boolean(url) && !/localhost|127\.0\.0\.1/i.test(url);
 const baseApiUrl = API_URL.replace(/\/$/, '');
 const canUseCloudAuth = () => isCloudUrl(baseApiUrl);
-
-const normalizePhone = (phone: string) => {
-  const trimmed = phone.trim();
-  const digitsOnly = trimmed.replace(/[^\d+]/g, '');
-
-  let candidate = digitsOnly;
-
-  if (digitsOnly.startsWith('00')) {
-    candidate = `+${digitsOnly.slice(2)}`;
-  } else if (digitsOnly.startsWith('09') && digitsOnly.length === 11) {
-    // PH local style: 09XXXXXXXXX -> +639XXXXXXXXX
-    candidate = `+63${digitsOnly.slice(1)}`;
-  } else if (digitsOnly.startsWith('9') && digitsOnly.length === 10) {
-    // PH shorthand without leading 0
-    candidate = `+63${digitsOnly}`;
-  } else if (digitsOnly.startsWith('639') && digitsOnly.length === 12) {
-    // PH with country code but missing +
-    candidate = `+${digitsOnly}`;
-  } else if (!digitsOnly.startsWith('+')) {
-    // Require explicit country code for non-PH local formats.
-    candidate = `+${digitsOnly}`;
-  }
-
-  let parsed = parsePhoneNumberFromString(candidate);
-
-  if (!parsed?.isValid()) {
-    // Additional PH fallback parse for local entries like 0917....
-    parsed = parsePhoneNumberFromString(trimmed, 'PH');
-  }
-
-  if (!parsed || !parsed.isValid()) {
-    throw new Error(
-      'Use a valid international number from any country, e.g. +639171234567, +60123456789, +628123456789.'
-    );
-  }
-
-  return parsed.number;
-};
 
 async function readJson<T>(key: string, fallback: T): Promise<T> {
   const raw = await AsyncStorage.getItem(key);
@@ -204,10 +162,9 @@ async function apiPost<T>(path: string, body: unknown): Promise<T> {
 async function registerViaApi(
   name: string,
   email: string,
-  password: string,
-  phone: string
+  password: string
 ): Promise<RegisterResponse> {
-  return apiPost<RegisterResponse>('/auth/register', { name, email, password, phone });
+  return apiPost<RegisterResponse>('/auth/register', { name, email, password });
 }
 
 async function loginViaApi(email: string, password: string): Promise<LoginResponse> {
@@ -279,10 +236,9 @@ async function verifyOtpViaGateway(userId: string, code: string): Promise<void> 
 }
 
 export const authService = {
-  async register(name: string, email: string, password: string, phone: string): Promise<RegisterResponse> {
+  async register(name: string, email: string, password: string): Promise<RegisterResponse> {
     const parsedName = name.trim();
     const parsedEmail = normalizeEmail(email);
-    let parsedPhone = '';
 
     if (parsedName.length < 2) {
       throw new Error('Name must be at least 2 characters.');
@@ -297,10 +253,8 @@ export const authService = {
       throw new Error('Password must be 8+ chars and include letters and numbers.');
     }
 
-    parsedPhone = normalizePhone(phone);
-
     if (canUseCloudAuth()) {
-      return registerViaApi(parsedName, parsedEmail, password, parsedPhone);
+      return registerViaApi(parsedName, parsedEmail, password);
     }
 
     const users = await getUsers();
@@ -313,8 +267,7 @@ export const authService = {
       id: `user_${Date.now()}`,
       name: parsedName,
       email: parsedEmail,
-      password,
-      phone: parsedPhone
+      password
     };
 
     await saveUsers([newUser, ...users]);
@@ -353,7 +306,7 @@ export const authService = {
     };
   },
 
-  async requestOtp(userId: string, method: Method = 'sms'): Promise<OtpResponse> {
+  async requestOtp(userId: string, method: Method = 'email'): Promise<OtpResponse> {
     if (canUseCloudAuth()) {
       return requestOtpViaApi(userId);
     }
@@ -371,7 +324,6 @@ export const authService = {
       sessions[userId] = {
         method,
         provider: 'gateway',
-        phone: user.email,
         expiresAt: Date.now() + expiresIn * 1000
       };
       await saveOtpSessions(sessions);
@@ -388,7 +340,6 @@ export const authService = {
       method,
       provider: 'local',
       code,
-      phone: user.email,
       expiresAt: Date.now() + OTP_TTL_MS
     };
     await saveOtpSessions(sessions);

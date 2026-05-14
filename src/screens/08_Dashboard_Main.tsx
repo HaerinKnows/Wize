@@ -13,7 +13,7 @@ import { radius, spacing, ThemeColors, typography } from '@/design/tokens';
 import { ThemeMode, useTheme } from '@/theme/ThemeProvider';
 import { fromMajor, formatCurrency } from '@/utils/currency';
 import { getPeriodRange, isTimestampInRange, TransactionPeriod, toLocalDateKey } from '@/utils/periods';
-import { InlineAd } from '@/components/InlineAd';
+
 
 type MenuItem = {
   label: string;
@@ -83,12 +83,7 @@ export default function DashboardMainScreen() {
     checkSubscription();
   }, [checkSubscription]);
 
-  useEffect(() => {
-    // Forcing premium to false for ad testing ONLY for my account
-    if (userId === 'user_79807800d0a114c1b1df6e8e') {
-      setPremium(false);
-    }
-  }, [setPremium, userId]);
+
 
   useEffect(() => {
     const todayKey = toLocalDateKey();
@@ -236,7 +231,7 @@ export default function DashboardMainScreen() {
                       onDelete={() => deleteTransaction(txn.id)}
                     />
                   ))}
-                  {index === 0 && <InlineAd />}
+
                 </View>
               );
             });

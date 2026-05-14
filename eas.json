@@ -20,6 +20,10 @@
     "production": {
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_SMS_GATEWAY_URL": "https://wizenance-sms-gateway-3m4j.onrender.com/auth/request-otp",
+        "EXPO_PUBLIC_API_URL": "https://wizenance-sms-gateway-3m4j.onrender.com"
       }
     }
   }

@@ -10,8 +10,7 @@
       "expo-local-authentication",
       "expo-secure-store",
       "expo-camera",
-      "expo-font",
-      "react-native-google-mobile-ads"
+      "expo-font"
     ],
     "newArchEnabled": false,
     "icon": "./assets/images/wizewide_1x1.png",
